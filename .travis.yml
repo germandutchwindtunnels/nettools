@@ -9,7 +9,6 @@ addons:
 script:
 - python -m py_compile Cisco.py
 - python -m py_compile OutputLog.py
-- python -m py_compile SVN.py
 - python -m py_compile portconfig.py
 - python -m py_compile PortConfigGui.py
 - python -m py_compile NewGui.pyw

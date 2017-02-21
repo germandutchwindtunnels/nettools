@@ -325,6 +325,4 @@ if __name__ == '__main__':
 
 	app = NewGui(sys.argv)
 
-	import SVN
-
 	sys.exit(app.exec_())
