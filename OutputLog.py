@@ -15,36 +15,39 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with nettools.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides the OutLog class."""
 
 import PyQt4.QtGui as QtGui
 
 class OutLog(object):
-	"""Outlog enables one to redirect stdout and stderr to a QTextEdit widget. It was shamelessly stolen from: http://stackoverflow.com/questions/17132994/pyside-and-python-logging/17145093#17145093"""
+	"""Outlog enables one to redirect stdout and stderr to a QTextEdit widget."""
 	def __init__(self, edit, out=None, color=None):
 		"""(edit, out=None, color=None) -> can write stdout, stderr to a QTextEdit."""
 		self.edit = edit
 		self.out = out
 		self.color = color
 
-	def write(self, m):
+	def write(self, msg):
+		"""Write a message to output and QTextEdit."""
 		if self.color:
-			tc = self.edit.textColor()
+			txt_color = self.edit.textColor()
 			self.edit.setTextColor(self.color)
 
 		self.edit.moveCursor(QtGui.QTextCursor.End)
-		self.edit.insertPlainText( m )
+		self.edit.insertPlainText(msg)
 
 		self.edit.ensureCursorVisible()
-	
+
 		if self.color:
-			self.edit.setTextColor(tc)
-	
+			self.edit.setTextColor(txt_color)
+
 		if self.out:
 			try:
-				self.out.write(m)
+				self.out.write(msg)
 			except IOError:
 				pass
 	def flush(self):
+		"""Flush output."""
 		if self.out:
 			try:
 				self.out.flush()
