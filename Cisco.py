@@ -152,10 +152,6 @@ class CiscoTelnetSession(object):
 		""""Close the connection to the Cisco router/switch"""
 		self.execute_command("exit")
 
-#	def split_output(self, output):
-#		splitted = output.split('\r\n')
-#		return splitted
-
 	def filter_output(self, output, regex):
 		"""Filter output from a command"""
 		result = {}
@@ -378,58 +374,6 @@ class CiscoTelnetSession(object):
 		output = self.execute_command(command)
 		return output
 
-#	def merge_outputs(self, outputs):
-#		output = []
-#		for key,values in outputs.iteritems():
-#			for value in values:
-#				value['hostname'] = key
-#				output.append(value)
-#		return output
-
-#	def deduplicate_output(self, items, unique_key, conflict_resolver):
-#		output = []
-#		for item in items:
-#			key = item[unique_key]
-
-#	def execute_on_neighbor(self, hostname, command, covered_neighbors, output, *args):
-#		"""Connect to a neighbor and execute the specified command. Depricated"""
-#		neighbor = CiscoTelnetSession()
-#		neighbor_open_result = neighbor.open(hostname, self.port, self.username, self.password)
-#		if neighbor_open_result:
-#			neighbor._execute_on_all_neighbors(command, covered_neighbors, output, *args)
-#		else:
-#			sys.stderr.write(self.host + ".execute_on_neighbor: failed to connect to " + hostname + "\n")
-
-#	def execute_on_all_neighbors(self, command, *args):
-#		covered_neighbors = [ self.host ]
-#		output = {}
-#		ret = self.execute_on_neighbors_blacklist(command, covered_neighbors, *args)
-#		return ret
-
-#	def execute_on_neighbors_blacklist(self, command, blacklist, *args):
-#		output = {}
-#		ret = self._execute_on_all_neighbors(command, blacklist, output, *args)
-#		return ret
-
-
-#	def _execute_on_all_neighbors(self, command, covered_neighbors, output, *args):
-#		printable_args = args
-#		print "Executing command '%s' on switch %s %s" % (command, str(self.host), str(printable_args))
-#		output[self.host] = command(self, *args)
-#		#print "Output: %s" % output[self.host]
-#
-#		neighbors = self.show_neighbors()
-		#print neighbors
-#		for neighbor in neighbors:
-#			self.execute_command("#keepalive")
-#			neighbor_hostname = neighbor["deviceid"]
-#			if neighbor_hostname not in covered_neighbors:#Make sure we don't run in cycles
-#				covered_neighbors.append(neighbor_hostname)
-#				self.execute_on_neighbor(neighbor_hostname, command, covered_neighbors, output, *args)
-#
-#		return output
-
-
 class CiscoSet(object):
 	"""This class represents a set of Cisco switches, connected in a network"""
 
@@ -472,14 +416,6 @@ class CiscoSet(object):
 	def set_blacklist(self, blacklist):
 		"""Don't connect to these hosts"""
 		self.blacklist = blacklist
-
-#	def _crawl_neighbors(self, device):
-#		"""Get all neighbors from a device"""
-#		neighbors = device.show_neighbors()
-#		neighbors_hostnames = [ neighbor["deviceid"] for neighbor in neighbors ]
-#		for neighbor_hostname in neighbors_hostnames:
-#			if neighbor_hostname not in self.seen:
-#				self.discover_devices()
 
 	def discover_devices(self):
 		'''Discover all networking devices, using a depth-first search.'''
