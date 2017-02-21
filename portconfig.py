@@ -19,7 +19,6 @@
 import sys
 import socket
 
-#import SVN
 #import Patchlist 
 from Cisco import CiscoTelnetSession
 from Cisco import CiscoSet

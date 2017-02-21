@@ -232,7 +232,6 @@ class PortConfigGui(QtGui.QMainWindow):
 
 
 if __name__ == '__main__':
-	import SVN
 	if len(sys.argv) < 4:
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password first-hostname \n")
 		sys.exit(-1)
