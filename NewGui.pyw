@@ -225,7 +225,8 @@ class NewGui(QApplication):
         self._get_config_thread.start()
 
     def _resize(self):
-        ''' Resize the columns of the data table based on its current contents. '''
+        ''' Resize the columns of the data table based on its current contents.
+        '''
 
         for col in range(self._win.ports.columnCount()):
             self._win.ports.resizeColumnToContents(col)
