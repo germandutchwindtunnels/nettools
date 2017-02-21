@@ -23,7 +23,8 @@ import sys, re
 
 import portconfig
 
-from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox, QPushButton
+from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
+from PyQt4.QtGui import QPushButton
 from PyQt4.QtCore import QThread, pyqtSignal
 import PyQt4.uic as uic
 
@@ -39,8 +40,9 @@ class WorkerThread(QThread):
         self._pass = password
 
 class GetConfigurationThread(WorkerThread):
-    ''' Get the network configuration in the background. Emits the "newData" signal with
-        patchports and vlans when done, then emits the "finished" signal. '''
+    ''' Get the network configuration in the background. Emits the "newData"
+        signal with patchports and vlans when done, then emits the "finished"
+        signal. '''
 
     newData = pyqtSignal(dict)
 
@@ -55,15 +57,19 @@ class GetConfigurationThread(WorkerThread):
         ''' Run this thread. '''
 
         data = {
-            'ports': portconfig.get_available_patchports(self._host, 23, self._user, self._pass),
-            'vlans': portconfig.get_available_vlans(self._host, 23, self._user, self._pass)
+            'ports': portconfig.get_available_patchports(self._host, 23,
+                                                         self._user,
+                                                         self._pass),
+            'vlans': portconfig.get_available_vlans(self._host, 23,
+                                                    self._user,
+                                                    self._pass)
         }
 
         self.newData.emit(data)
 
 class SetConfigurationThread(WorkerThread):
-    ''' Set the network configuration in the background. Emits the "finished" signal when done.
-    '''
+    ''' Set the network configuration in the background. Emits the "finished"
+        signal when done. '''
 
     def __init__(self, username, password):
         WorkerThread.__init__(self, username, password)
@@ -71,8 +77,8 @@ class SetConfigurationThread(WorkerThread):
         self._jobs = [ ]
 
     def addJob(self, switch_host, switch_port, old_vlan_id, new_vlan_id):
-        ''' Add a job configuring <switch_port> on <switch_host> from <old_vlan_id> to
-            <new_vlan_id>. '''
+        ''' Add a job configuring <switch_port> on <switch_host> from
+            <old_vlan_id> to <new_vlan_id>. '''
 
         self._jobs.append( {
             'switch_host': switch_host,
@@ -91,8 +97,10 @@ class SetConfigurationThread(WorkerThread):
 
         for job in self._jobs:
             portconfig.configure_patchid_raw(self._user, self._pass,
-                                             job['switch_host'], job['switch_port'],
-                                             job['new_vlan_id'], job['old_vlan_id'])
+                                             job['switch_host'],
+                                             job['switch_port'],
+                                             job['new_vlan_id'],
+                                             job['old_vlan_id'])
 
         self._jobs = [ ]
 
@@ -100,8 +108,8 @@ class MyComboBox(QComboBox):
     ''' A subclass of the PyQt4 QComboBox that ignores mouse wheel events. '''
 
     def wheelEvent(self, event):    # pylint: disable=no-self-use
-        """ Pass through mouse wheel events, so they scroll the underlying table instead
-            of this combo box. """
+        """ Pass through mouse wheel events, so they scroll the underlying table
+            instead of this combo box. """
 
         event.ignore()
 
@@ -146,7 +154,9 @@ class NewGui(QApplication):
     def _usage(exit_code):
         ''' Show usage and exit with <exit_code>. '''
 
-        sys.stderr.write("Usage: " + sys.argv[0] + " <username> <password> <first-switch>\n")
+        sys.stderr.write("Usage: " \
+                         + sys.argv[0]\
+                         + " <username> <password> <first-switch>\n")
 
         sys.exit(exit_code)
 
@@ -205,9 +215,13 @@ class NewGui(QApplication):
 
         self._show_message('Getting switch configuration; please wait.')
 
-        self._get_config_thread = GetConfigurationThread(self._host, self._user, self._pass)
-        self._get_config_thread.newData.connect(self._handle_new_data)
-        self._get_config_thread.finished.connect(self._get_config_thread_finished)
+        self._get_config_thread = GetConfigurationThread(self._host,
+                                                         self._user,
+                                                         self._pass)
+        self._get_config_thread.newData.connect(
+            self._handle_new_data)
+        self._get_config_thread.finished.connect(
+            self._get_config_thread_finished)
         self._get_config_thread.start()
 
     def _resize(self):
@@ -237,8 +251,8 @@ class NewGui(QApplication):
             self._msg_box = None
 
     def _submit_pressed(self, port, item):
-        ''' The user has pressed the Submit button for <port> in QTreeWidgetItem <item>.
-            Handle this.'''
+        ''' The user has pressed the Submit button for <port> in QTreeWidgetItem
+            <item>. Handle this.'''
 
         current_index = self._win.ports.itemWidget(item, 3).currentIndex()
 
@@ -251,15 +265,18 @@ class NewGui(QApplication):
                            (port['patchid'], new_vlan_id))
 
         self._set_config_thread = SetConfigurationThread(self._user, self._pass)
-        self._set_config_thread.addJob(switch_host, switch_port, old_vlan_id, new_vlan_id)
-        self._set_config_thread.finished.connect(self._set_config_thread_finished)
+        self._set_config_thread.addJob(switch_host, switch_port,
+                                       old_vlan_id, new_vlan_id)
+        self._set_config_thread.finished.connect(
+            self._set_config_thread_finished)
         self._set_config_thread.start()
 
     def _submit_all(self):
         ''' The user has pressed the "Submit all" button. Handle this. '''
 
         self._set_config_thread = SetConfigurationThread(self._user, self._pass)
-        self._set_config_thread.finished.connect(self._set_config_thread_finished)
+        self._set_config_thread.finished.connect(
+            self._set_config_thread_finished)
 
         text = ""
 
@@ -275,7 +292,8 @@ class NewGui(QApplication):
             new_vlan_id = self._vlans[current_index - 1]['vlanid']
 
             if new_vlan_id != old_vlan_id:
-                self._set_config_thread.addJob(port['hostname'], port['interface'],
+                self._set_config_thread.addJob(port['hostname'],
+                                               port['interface'],
                                                old_vlan_id, new_vlan_id)
 
                 text += '- Change port %s from vlan %s to vlan %s.\n' \
@@ -284,7 +302,8 @@ class NewGui(QApplication):
         if self._set_config_thread.jobCount() > 0 and \
             QMessageBox.question(self._win, "OK to submit?",
                                  "Submit the following changes?\n\n" + text,
-                                 QMessageBox.Ok | QMessageBox.Cancel) == QMessageBox.Ok:
+                                 QMessageBox.Ok | QMessageBox.Cancel) == \
+                                 QMessageBox.Ok:
             self._show_message('Submitting changes; please wait.')
             self._set_config_thread.start()
         else:
