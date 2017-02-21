@@ -5,6 +5,7 @@ addons:
   apt:
     packages:
       - python-qt4
+      - pylint
 
 script:
 - python -m py_compile Cisco.py
