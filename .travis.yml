@@ -8,6 +8,8 @@ addons:
       - pylint
 
 script:
+- pylint --disable=mixed-indentation,line-too-long,bad-whitespace,anomalous-backslash-in-string,invalid-name,too-many-public-methods Cisco.py
+- pylint --disable=mixed-indentation,line-too-long,bad-whitespace,anomalous-backslash-in-string,invalid-name,too-many-public-methods OutputLog.py
 - python -m py_compile Cisco.py
 - python -m py_compile OutputLog.py
 - python -m py_compile portconfig.py

@@ -21,15 +21,14 @@ from telnetlib import Telnet
 from sets import Set
 import multiprocessing
 import re
-import sys
 import time
-import itertools
 import json
-
+import sys
+import socket
 
 class CiscoTelnetSession(object):
-	"""This class provides the interface to a Cisco router/switch over a Telnet connection"""
-	
+	"""This class provides the interface to a Cisco router/switch over Telnet"""
+
 	regex_protocol = '(?P<protocol>Internet)'
 	regex_ip = '(?P<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
 	regex_age = '(?P<age>[0-9\-]+)'
@@ -50,7 +49,7 @@ class CiscoTelnetSession(object):
 	regex_holdtime = '(?P<holdtime>[0-9]+)'
 	regex_capabilities = '(?P<capabilities>([RTBSHIrP],?\s?)+)'
 	regex_platform = '(?P<platform>[0-9a-zA-Z-]+)'
-	regex_string = "[0-9a-zA-Z]+"	
+	regex_string = "[0-9a-zA-Z]+"
 	regex_patchid = '(?P<patchid>[a-z0-9_]+(\-|\.)[a-z0-9]+(\-|\.)[0-9]+[a-z]?)'
 
 	newline = "\n"
@@ -71,7 +70,8 @@ class CiscoTelnetSession(object):
 		#self.session.write("exit\n")
 		self.session.close()
 
-	def write_command(self, commandstr, line_timeout = None):
+	def write_command(self, commandstr):
+		"""Write a command to the peer"""
 #		self.session.write(commandstr)
 		commandstr_len = len(commandstr)
 		for i in range(0, commandstr_len):
@@ -79,20 +79,22 @@ class CiscoTelnetSession(object):
 			time.sleep(self.character_time_spacing_seconds)
 			if commandstr[i] == '\n':
 				time.sleep(self.line_time_spacing_seconds)
-	
+
 	def execute_command_lowlevel(self, command, timeout = None):
 		"""Execute a command and return the result"""
 		#print self.host + ".execute_command: " + command
-		if timeout == None: timeout = self.response_timeout
+		if timeout == None:
+			timeout = self.response_timeout
 		commandstr = command + self.newline #.strip() + self.newline
 
-		self.write_command(commandstr)	
-		output = self.session.read_until(self.prompt, timeout) 
-		ret = output[:-len(self.prompt)] 
+		self.write_command(commandstr)
+		output = self.session.read_until(self.prompt, timeout)
+		ret = output[:-len(self.prompt)]
 		#print "%s: '%s'" % (command, ret)
 		return ret
 
 	def execute_command(self, command, timeout = None):
+		"""Execute a command on the Cisco switch"""
 		retries_remaining = 3
 		while retries_remaining > 0:
 			try:
@@ -103,16 +105,17 @@ class CiscoTelnetSession(object):
 				self.connect_and_login()
 
 	def connect_and_login(self):
+		"""Establish a Telnet connection and perform a login"""
 		self.session = Telnet()
 		try:
 			self.session.open(self.host, self.port, self.response_timeout)
-		except:
+		except socket.timeout:
 			return False
-		
+
 		if not self.login(self.username, self.password):
 			return False
 
-		try:		
+		try:
 			self.execute_command_lowlevel("terminal length 0")
 			self.execute_command_lowlevel("terminal width 0")
 		except EOFError:
@@ -149,9 +152,9 @@ class CiscoTelnetSession(object):
 		""""Close the connection to the Cisco router/switch"""
 		self.execute_command("exit")
 
-	def split_output(self, output):
-		splitted = output.split('\r\n')
-		return splitted
+#	def split_output(self, output):
+#		splitted = output.split('\r\n')
+#		return splitted
 
 	def filter_output(self, output, regex):
 		"""Filter output from a command"""
@@ -160,21 +163,21 @@ class CiscoTelnetSession(object):
 		if isinstance(output, str):
 			lines = [output]
 		else:
-			lines = output		
+			lines = output
 
 		for line in lines:
-			it = re.finditer(regex, line)
+			iterator = re.finditer(regex, line)
 			try:
 				while True:
-					cur = it.next()
+					cur = iterator.next()
 					result = cur.groupdict()
 					result['hostname'] = self.host
 					result_list.append(result)
 			except StopIteration:
 				pass
-		
+
 		return result_list
-	
+
 
 	def command_filter(self, command, regex, timeout = None):
 		"""Execute a command and regex filter the output"""
@@ -185,15 +188,15 @@ class CiscoTelnetSession(object):
 	def show_mac_address_table(self):
 		""""Get a list of mac addresses known to the device, with associated port, type and vlanid"""
 		command = "show mac address-table"
-		regex = CiscoTelnetSession.regex_whitespace + CiscoTelnetSession.regex_vlanid + CiscoTelnetSession.regex_whitespace 
-		regex += CiscoTelnetSession.regex_macaddress + CiscoTelnetSession.regex_whitespace 
+		regex = CiscoTelnetSession.regex_whitespace + CiscoTelnetSession.regex_vlanid + CiscoTelnetSession.regex_whitespace
+		regex += CiscoTelnetSession.regex_macaddress + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_macaddress_type + CiscoTelnetSession.regex_whitespace + CiscoTelnetSession.regex_port
 		return self.command_filter(command, regex)
-		
+
 	def show_vlan(self):
 		"""Return a list of VLANs,status and assigned ports"""
 		command = "show vlan brief"
-		regex = CiscoTelnetSession.regex_vlanid + CiscoTelnetSession.regex_whitespace 
+		regex = CiscoTelnetSession.regex_vlanid + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_vlanname + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_vlanstatus + CiscoTelnetSession.regex_whitespace
 #		regex += CiscoTelnetSession.regex_ports
@@ -208,9 +211,9 @@ class CiscoTelnetSession(object):
 		regex += CiscoTelnetSession.regex_capabilities + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_platform + CiscoTelnetSession.regex_optionalwhitespace
 		regex += CiscoTelnetSession.regex_portid
-		ret = self.command_filter(command, regex)		
+		ret = self.command_filter(command, regex)
 		return ret
-	
+
 	def show_interface_vlan(self):
 		"""Return a list of ports and their VLAN assignment"""
 		command = "show interface status"
@@ -221,6 +224,7 @@ class CiscoTelnetSession(object):
 		return self.command_filter(command, regex)
 
 	def show_arp(self):
+		"""Request the ARP table of the switch"""
 		command = "show arp"
 		regex = CiscoTelnetSession.regex_protocol + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_ip + CiscoTelnetSession.regex_whitespace
@@ -229,7 +233,7 @@ class CiscoTelnetSession(object):
 		regex += CiscoTelnetSession.regex_arptype + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_vlanname
 		return self.command_filter(command, regex)
-	
+
 	def upload_file_tftp(self, src_filename, host, dest_filename):
 		'''Upload a file through tftp'''
 		regex = '(?P<bytes>[0-9]+)\sbytes\s'
@@ -241,7 +245,7 @@ class CiscoTelnetSession(object):
 		#result_list = self.filter_output(output, regex)
 		ret = "-1"
 		#print self.host + ": output=\n'" + output + "'"
-		if(len(output) > 0):
+		if len(output) > 0:
 			ret = output[0]['bytes']
 		return ret
 
@@ -261,13 +265,13 @@ class CiscoTelnetSession(object):
 		return self.execute_command(cmd)
 
 	def show_lldp_neighbors(self):
-		'''Show LLDP neighbors'''	
+		'''Show LLDP neighbors'''
 		command = "show lldp neighbors"
 		regex = CiscoTelnetSession.regex_lldp_deviceid + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_interface + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_holdtime + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_capabilities + CiscoTelnetSession.regex_whitespace
-		regex += CiscoTelnetSession.regex_portid	
+		regex += CiscoTelnetSession.regex_portid
 		return self.command_filter(command, regex)
 
 	def show_lldp_neighbor_detail(self, neighbor):
@@ -279,7 +283,8 @@ class CiscoTelnetSession(object):
 		for line in splitted_output:
 			colon = ": "
 			colonpos = line.find(colon)
-			if colonpos == -1: continue
+			if colonpos == -1:
+				continue
 			key_end = colonpos
 			value_start = colonpos + len(colon)
 			key = line[:key_end].lstrip()
@@ -292,7 +297,7 @@ class CiscoTelnetSession(object):
 		command = "interface " + interface + self.newline
 		command += "description " + description	+ self.newline
 		command += "exit" + self.newline
-		return command 
+		return command
 
 	def set_interface_description(self, interface, description):
 		'''Set the description of an interface'''
@@ -300,7 +305,8 @@ class CiscoTelnetSession(object):
 		command += self.set_single_interface_description(interface, description)
 		command += "end" + self.newline
 		output = self.execute_command(command)
-				
+		return output
+
 	def set_interfaces_descriptions(self, interfaces_descriptions):
 		'''Set the description of a list of interfaces'''
 		command = "config t" + self.newline
@@ -309,6 +315,7 @@ class CiscoTelnetSession(object):
 			command += self.set_single_interface_description(interface, description)
 		command += "end" + self.newline
 		output = self.execute_command(command)
+		return output
 
 	def set_single_interface_vlan(self, interface, vlanid):
 		'''Produce the command to set the VLAN id for a singe interface'''
@@ -341,7 +348,7 @@ class CiscoTelnetSession(object):
 		command += "end" + self.newline
 		output = self.execute_command(command)
 		return output
-	
+
 	def set_interface_vlan_voice_vlan(self, interface, vlanid, voice_vlanid):
 		'''Set the VLAN ID and Voice VLAN ID of an interface'''
 		command = ""
@@ -363,6 +370,7 @@ class CiscoTelnetSession(object):
 		return command
 
 	def set_interface_trunk(self, interface):
+		"""Set the interface to 802.1q trunk mode"""
 		command = ""
 		command += "config t" + self.newline
 		command += self.set_single_interface_trunk(interface)
@@ -370,61 +378,61 @@ class CiscoTelnetSession(object):
 		output = self.execute_command(command)
 		return output
 
-	def merge_outputs(self, outputs):
-		output = []
-		for key,values in outputs.iteritems():
-			for value in values:
-				value['hostname'] = key
-				output.append(value)
-		return output
+#	def merge_outputs(self, outputs):
+#		output = []
+#		for key,values in outputs.iteritems():
+#			for value in values:
+#				value['hostname'] = key
+#				output.append(value)
+#		return output
 
-	def deduplicate_output(self, items, unique_key, conflict_resolver):
-		output = []
-		for item in items:
-			key = item[unique_key]
-			
-	def execute_on_neighbor(self, hostname, command, covered_neighbors, output, *args):
-		neighbor = CiscoTelnetSession()
-		neighbor_open_result = neighbor.open(hostname, self.port, self.username, self.password)
-		if neighbor_open_result:
-			neighbor._execute_on_all_neighbors(command, covered_neighbors, output, *args)
-		else:
-			sys.stderr.write(self.host + ".execute_on_neighbor: failed to connect to " + hostname + "\n")
-	
-	def execute_on_all_neighbors(self, command, *args):
-		covered_neighbors = [ self.host ]
-		output = {}
-		ret = self.execute_on_neighbors_blacklist(command, covered_neighbors, *args)
-		return ret
+#	def deduplicate_output(self, items, unique_key, conflict_resolver):
+#		output = []
+#		for item in items:
+#			key = item[unique_key]
 
-	def execute_on_neighbors_blacklist(self, command, blacklist, *args):
-		output = {}
-		ret = self._execute_on_all_neighbors(command, blacklist, output, *args)
-		return ret
-		
+#	def execute_on_neighbor(self, hostname, command, covered_neighbors, output, *args):
+#		"""Connect to a neighbor and execute the specified command. Depricated"""
+#		neighbor = CiscoTelnetSession()
+#		neighbor_open_result = neighbor.open(hostname, self.port, self.username, self.password)
+#		if neighbor_open_result:
+#			neighbor._execute_on_all_neighbors(command, covered_neighbors, output, *args)
+#		else:
+#			sys.stderr.write(self.host + ".execute_on_neighbor: failed to connect to " + hostname + "\n")
 
-	def _execute_on_all_neighbors(self, command, covered_neighbors, output, *args):
-		printable_args = args
-		print "Executing command '%s' on switch %s %s" % (command, str(self.host), str(printable_args))
-		output[self.host] = command(self, *args)
-		#print "Output: %s" % output[self.host]
-		
-		neighbors = self.show_neighbors()
+#	def execute_on_all_neighbors(self, command, *args):
+#		covered_neighbors = [ self.host ]
+#		output = {}
+#		ret = self.execute_on_neighbors_blacklist(command, covered_neighbors, *args)
+#		return ret
+
+#	def execute_on_neighbors_blacklist(self, command, blacklist, *args):
+#		output = {}
+#		ret = self._execute_on_all_neighbors(command, blacklist, output, *args)
+#		return ret
+
+
+#	def _execute_on_all_neighbors(self, command, covered_neighbors, output, *args):
+#		printable_args = args
+#		print "Executing command '%s' on switch %s %s" % (command, str(self.host), str(printable_args))
+#		output[self.host] = command(self, *args)
+#		#print "Output: %s" % output[self.host]
+#
+#		neighbors = self.show_neighbors()
 		#print neighbors
-		for neighbor in neighbors:
+#		for neighbor in neighbors:
 #			self.execute_command("#keepalive")
-			neighbor_hostname = neighbor["deviceid"]
-			if neighbor_hostname not in covered_neighbors:#Make sure we don't run in cycles
-				covered_neighbors.append(neighbor_hostname)
-				self.execute_on_neighbor(neighbor_hostname, command, covered_neighbors, output, *args)				
-	
-	
-		return output
+#			neighbor_hostname = neighbor["deviceid"]
+#			if neighbor_hostname not in covered_neighbors:#Make sure we don't run in cycles
+#				covered_neighbors.append(neighbor_hostname)
+#				self.execute_on_neighbor(neighbor_hostname, command, covered_neighbors, output, *args)
+#
+#		return output
 
 
 class CiscoSet(object):
 	"""This class represents a set of Cisco switches, connected in a network"""
-	
+
 	def __init__(self, username, password, start_device, port):
 		self.username = username
 		self.password = password
@@ -434,10 +442,12 @@ class CiscoSet(object):
 		self.blacklist = []
 
 	def get_serialize_filename(self):
+		"""Get the filename to serialize this set to"""
 		filename = "discover-%s.json" % self.start_device
 		return filename
 
 	def load(self):
+		"""Load from file"""
 		filename = self.get_serialize_filename()
 		seen = self.seen
 		try:
@@ -451,23 +461,26 @@ class CiscoSet(object):
 			self.seen = seen #Restore backup of seen when we encounter problems during decoding
 
 	def save(self):
+		"""Save to file"""
 		filename = self.get_serialize_filename()
 		fd = open(filename, "w+")
 		json_contents = json.dumps(self.seen)
 		fd.write(json_contents)
-		
-		
+
+
 
 	def set_blacklist(self, blacklist):
+		"""Don't connect to these hosts"""
 		self.blacklist = blacklist
 
-	def _crawl_neighbors(self, device):
-		neighbors = device.show_neighbors()
-		neighbors_hostnames = [ neighbor["deviceid"] for neighbor in neighbors ]
-		for neighbor_hostname in neighbors_hostnames:
-			if neighbor_hostname not in self.seen:
-				self.discover_devices(neighbor_hostname)
-		
+#	def _crawl_neighbors(self, device):
+#		"""Get all neighbors from a device"""
+#		neighbors = device.show_neighbors()
+#		neighbors_hostnames = [ neighbor["deviceid"] for neighbor in neighbors ]
+#		for neighbor_hostname in neighbors_hostnames:
+#			if neighbor_hostname not in self.seen:
+#				self.discover_devices()
+
 	def discover_devices(self):
 		'''Discover all networking devices, using a depth-first search.'''
 		self.load() #Attempt to bootstrap using a saved json file
@@ -479,16 +492,17 @@ class CiscoSet(object):
 			neighbor_hostnames = [ x['deviceid'] for x in neighborslist ]
 			all_devices = self.seen + neighbor_hostnames
 			all_devices_uniq = uniq(all_devices)
-			self.seen = all_devices_uniq 
+			self.seen = all_devices_uniq
 			print "Seen: " + str(self.seen)
 		self.save() #Save what we've found for the next time
-	
+
 	def execute_on_all(self, command, *args):
+		"""Execute command on all devices"""
 		cpu_count = 50 #multiprocessing.cpu_count()
 		command_name = command.__name__
 		print "Process count %d" % cpu_count
 		pool = multiprocessing.Pool(processes=cpu_count)
-		
+
 		results = [ pool.apply_async(execute_on_device, (host, self.port, self.username, self.password, command_name) + args) for host in self.seen if host not in self.blacklist ]
 		ret = [ ]
 		for res in results:
@@ -499,20 +513,21 @@ class CiscoSet(object):
 		return ret
 
 def uniq(seq):
+	"""Remove duplicates from list"""
 	s = Set(seq)
 	unique = list(s)
 	unique_sorted = sorted(unique)
 	return unique_sorted
 
 def execute_on_device(hostname, port, username, password, command_name, *args):
+	"""Helper function for CiscoSet.discover_devices"""
 	device = CiscoTelnetSession()
 	open_result = device.open(hostname, port, username, password)
-	object_functions = dir(device)
+#	object_functions = dir(device)
 	command = getattr(device, command_name, None)
 	if command is None:
 		sys.stderr.write("execute_on_device: failed to look up function %s in CiscoTelnetSession class\n" % command_name)
 		return None
-		
 
 	ret = []
 	if open_result:
