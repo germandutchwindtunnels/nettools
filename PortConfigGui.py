@@ -159,7 +159,7 @@ class PortConfigGui(QtGui.QMainWindow):
 
 		variantData = sourceComboBox.itemData(selectedIndex)
 		variantString = str(variantData.toString())
-		variantDict = eval(variantString) #pylint: disable=W0123
+		variantDict = eval(variantString) #pylint: disable=all
 		return variantDict
 
 	def _set_combobox_variantdata(self, row_number, column_number, variantdata):
