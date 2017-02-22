@@ -313,10 +313,13 @@ class NewGui(QApplication):
         else:
             self._set_config_thread.deleteLater()
 
-    def _report_bug(self):
-      url = "https://github.com/germandutchwindtunnels/nettools/issues/new"
+    @staticmethod
+    def _report_bug():
+        ''' Direct the user to github to create a bug report. '''
 
-      webbrowser.open(url, 1, True)
+        url = "https://github.com/germandutchwindtunnels/nettools/issues/new"
+
+        webbrowser.open(url, 1, True)
 
     def _add_to_tree(self, port):
         ''' Add an entry for port <port> to the QTreeWidget, '''
