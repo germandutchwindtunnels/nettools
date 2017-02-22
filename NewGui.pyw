@@ -143,8 +143,10 @@ class NewGui(QApplication):
         self._win.ports.itemExpanded.connect(lambda item: self._resize())
         self._win.ports.itemCollapsed.connect(lambda item: self._resize())
 
-        self._win.buttonReload.pressed.connect(self._get_configuration)
-        self._win.buttonSubmitAll.pressed.connect(self._submit_all)
+        self._win.buttonReload.clicked.connect(self._get_configuration)
+        self._win.buttonSubmitAll.clicked.connect(self._submit_all)
+
+        self._win.statusbar.hide()
 
         self._win.show()
 
