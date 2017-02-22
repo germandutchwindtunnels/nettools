@@ -18,7 +18,7 @@
 
 ''' A New GUI for nettools. '''
 
-import sys, re
+import sys, re, webbrowser
 # import pprint
 
 import portconfig
@@ -143,8 +143,11 @@ class NewGui(QApplication):
         self._win.ports.itemExpanded.connect(lambda item: self._resize())
         self._win.ports.itemCollapsed.connect(lambda item: self._resize())
 
-        self._win.buttonReload.pressed.connect(self._get_configuration)
-        self._win.buttonSubmitAll.pressed.connect(self._submit_all)
+        self._win.buttonReload.clicked.connect(self._get_configuration)
+        self._win.buttonSubmitAll.clicked.connect(self._submit_all)
+        self._win.buttonBugReport.clicked.connect(self._report_bug)
+
+        self._win.statusbar.hide()
 
         self._win.show()
 
@@ -309,6 +312,14 @@ class NewGui(QApplication):
             self._set_config_thread.start()
         else:
             self._set_config_thread.deleteLater()
+
+    @staticmethod
+    def _report_bug():
+        ''' Direct the user to github to create a bug report. '''
+
+        url = "https://github.com/germandutchwindtunnels/nettools/issues/new"
+
+        webbrowser.open(url, 1, True)
 
     def _add_to_tree(self, port):
         ''' Add an entry for port <port> to the QTreeWidget, '''
