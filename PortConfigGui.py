@@ -29,6 +29,11 @@ from OutputLog import OutLog
 #For bugreporting at github
 import webbrowser
 
+sys.path.insert(0, "./dulwich")
+import dulwich.porcelain as porcelain
+repo = "./"
+porcelain.pull(repo, "http://github.com/germandutchwindtunnels/nettools.git")
+
 
 class PortConfigGui(QtGui.QMainWindow):
 	"""The main class/window for the PortConfigGui application"""
