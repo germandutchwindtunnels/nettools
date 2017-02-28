@@ -20,7 +20,7 @@
 import sys
 sys.path.append("./dulwich")
 import dulwich.porcelain as porcelain #pylint: disable=import-error
-import dulwich.errors
+import dulwich.errors #pylint: disable=import-error
 from subprocess import check_call as run
 
 github_url = "https://github.com/germandutchwindtunnels/nettools.git"
