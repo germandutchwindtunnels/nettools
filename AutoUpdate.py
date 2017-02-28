@@ -20,8 +20,15 @@
 import sys
 sys.path.append("./dulwich")
 import dulwich.porcelain as porcelain #pylint: disable=import-error
+import dulwich.errors
 from subprocess import check_call as run
 
-porcelain.pull("./", "https://github.com/germandutchwindtunnels/nettools.git")
+github_url = "https://github.com/germandutchwindtunnels/nettools.git"
+target_dir = "./"
+
+try:
+	porcelain.pull(target_dir, github_url)
+except dulwich.errors.NotGitRepository:
+	porcelain.clone(github_url, target_dir)
 cmd = sys.executable + " " + " ".join(sys.argv[1:])
 run(cmd, shell=True)
