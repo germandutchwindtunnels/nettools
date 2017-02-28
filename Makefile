@@ -1,4 +1,4 @@
-test: Cisco.py OutputLog.py PortConfigGui.py portconfig.py NewGui.pyw
+test: Cisco.py OutputLog.py PortConfigGui.py portconfig.py NewGui.pyw AutoUpdate.py
 	pylint --disable=mixed-indentation,line-too-long,bad-whitespace,anomalous-backslash-in-string,invalid-name,too-many-public-methods Cisco.py
 	pylint --disable=mixed-indentation,line-too-long,bad-whitespace,anomalous-backslash-in-string,invalid-name,too-many-public-methods,no-member OutputLog.py
 	pylint --disable=mixed-indentation,line-too-long,bad-whitespace,anomalous-backslash-in-string,invalid-name,too-many-public-methods,no-name-in-module,no-member PortConfigGui.py
@@ -9,4 +9,4 @@ test: Cisco.py OutputLog.py PortConfigGui.py portconfig.py NewGui.pyw
 	python -m py_compile portconfig.py
 	python -m py_compile PortConfigGui.py
 	python -m py_compile NewGui.pyw
-
+	python -m py_compile AutoUpdate.py

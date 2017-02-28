@@ -23,5 +23,5 @@ import dulwich.porcelain as porcelain
 from subprocess import check_call as run
 
 porcelain.pull("./", "https://github.com/germandutchwindtunnels/nettools.git")
-cmd = sys.executable + " " + " ".join(sys.argv[1:], shell=True)
-run(cmd)
+cmd = sys.executable + " " + " ".join(sys.argv[1:])
+run(cmd, shell=True)
