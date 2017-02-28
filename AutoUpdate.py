@@ -19,7 +19,7 @@
 
 import sys
 sys.path.append("./dulwich")
-import dulwich.porcelain as porcelain
+import dulwich.porcelain as porcelain #pylint: disable=import-error
 from subprocess import check_call as run
 
 porcelain.pull("./", "https://github.com/germandutchwindtunnels/nettools.git")
