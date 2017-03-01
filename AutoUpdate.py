@@ -26,6 +26,10 @@ from subprocess import check_call as run
 github_url = "https://github.com/germandutchwindtunnels/nettools.git"
 target_dir = "./"
 
+if len(sys.argv) < 2:
+	print "Usage: %s script script-args" % sys.argv[0]
+	sys.exit(-1)
+
 try:
 	porcelain.pull(target_dir, github_url)
 except dulwich.errors.NotGitRepository:
