@@ -29,7 +29,6 @@ from OutputLog import OutLog
 #For bugreporting at github
 import webbrowser
 
-
 class PortConfigGui(QtGui.QMainWindow):
 	"""The main class/window for the PortConfigGui application"""
 	def __init__(self, hostname, username, password):
