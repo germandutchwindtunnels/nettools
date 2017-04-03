@@ -26,6 +26,7 @@ For the procedure to work, a number of conditions must be met:
 
 ## How to run this application
 The application needs to be started with the following command:
-* python NewGui.pyw <username> <password> <first-switch>
+* python NewGui.pyw _username password first-switch_
+
 -or-
-* python PortConfigGui.py <username> <password> <first-switch>
+* python PortConfigGui.py _username password first-switch_
