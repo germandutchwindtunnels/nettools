@@ -17,9 +17,15 @@ The software is designed to use the Cisco Discovery Protocol to "discover" the n
 2. Collect all neighbors with the `show cdp neighbors` command.
 3. Recursively connect to all neighbors and perform the same procedure.
 
-This is performed in a parallel fashion, since Cisco IOS switches are usually pretty slow. 
+This is performed in a parallel fashion, since Cisco IOS switches are usually pretty slow.
 
 For the procedure to work, a number of conditions must be met:
 * All switches must be registered in DNS with their hostname. For example, a switch called "switch01" must be registered as "switch01.example.com" in DNS.
 * All switches must have CDP turned on. One could, theoretically, use LLDP instead of CDP btw.
 * The user supplied to nettools must be registered on the switch with enough privileges.
+
+## How to run this application
+The application needs to be started with the following command:
+* python NewGui.pyw <username> <password> <first-switch>
+-or-
+* python PortConfigGui.py <username> <password> <first-switch>
