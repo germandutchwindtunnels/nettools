@@ -1,22 +1,22 @@
 #!/usr/bin/env python
+"""This file is the main routine for finding IPs in a Cisco-based network"""
 import sys
 
-#import SVN
-#import Patchlist 
 from Cisco import CiscoTelnetSession, CiscoSet
 
 telnet_port = 23
 
-def get_vlan_name(vlans, vlan_id):
-	for vlan in vlans:
+def get_vlan_name(vlan_list, vlan_id):
+	"""Look up the vlan name by the vlan id, in a list returned by the switch"""
+	for vlan in vlan_list:
 		if vlan["vlanid"] == str(vlan_id):
 			return vlan["vlanname"]
 
-#TODO: This could be optimized for repeated calls using a dict for caching... but who cares about performance, right?
-def count_mac_addresses(mac_addresses, hostname, port):
+def count_mac_addresses(mac_addresses, switch_hostname, switch_port):
+	"""Count the number of mac addresses seen on a single port"""
 	count = 0
-	for mac_entry in mac_addresses:
-		if mac_entry["hostname"] == hostname and mac_entry["port"] == port:
+	for cur_mac_entry in mac_addresses:
+		if cur_mac_entry["hostname"] == switch_hostname and cur_mac_entry["port"] == switch_port:
 			count = count + 1
 	return count
 
@@ -25,7 +25,7 @@ if __name__ == '__main__':
 	if len(sys.argv) < 5:
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password first-switch-hostname the-missing-IP\n")
 		sys.exit(-1)
-	
+
 	username = str(sys.argv[1])
 	password = str(sys.argv[2])
 	hostname = str(sys.argv[3])
@@ -46,7 +46,7 @@ if __name__ == '__main__':
 	for arp_entry in arp:
 		arp_entry_ip  = arp_entry["ip"]
 		arp_entry_mac = arp_entry["macaddress"]
-		if(arp_entry_ip == ip):
+		if arp_entry_ip == ip:
 			ip_mac = arp_entry_mac
 
 	for mac_entry in mac:
@@ -55,5 +55,3 @@ if __name__ == '__main__':
 			mac_entry["uncertainty"] = count_mac_addresses(mac, mac_entry["hostname"], mac_entry["port"])
 			mac_entry["vlanname"] = get_vlan_name(vlans, mac_entry["vlanid"])
 			print mac_entry
-	
-		
