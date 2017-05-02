@@ -27,5 +27,5 @@ if __name__ == '__main__':
 
 	print "digraph \"" + switch_hostname + "\" {"
 	for neighbor in neighbors:
-		print "\"" + neighbor["hostname"] + "\" -> \"" + neighbor["deviceid"] + "\" [ label=\"" + neighbor["interface"] + "\" ];"
+		print "\"" + neighbor["hostname"] + "\" -> \"" + neighbor["deviceid"] + "\";"
 	print "}"
