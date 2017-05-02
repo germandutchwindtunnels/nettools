@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """This file is the main routine for finding IPs in a Cisco-based network"""
 import sys
+import json
+
 
 from Cisco import CiscoTelnetSession, CiscoSet
 
@@ -49,9 +51,14 @@ if __name__ == '__main__':
 		if arp_entry_ip == ip:
 			ip_mac = arp_entry_mac
 
+	results = []
 	for mac_entry in mac:
 		if mac_entry["macaddress"] == ip_mac:
 			mac_entry.pop("macaddress_type") #Remove uninteresting info before printing
 			mac_entry["uncertainty"] = count_mac_addresses(mac, mac_entry["hostname"], mac_entry["port"])
 			mac_entry["vlanname"] = get_vlan_name(vlans, mac_entry["vlanid"])
-			print mac_entry
+			results.append(mac_entry)
+
+	sorted_results = sorted(results, key=lambda k: k['uncertainty'])
+	json_result = json.dumps(sorted_results)
+	print json_result 
