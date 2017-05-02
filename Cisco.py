@@ -101,7 +101,7 @@ class CiscoTelnetSession(object):
 				return self.execute_command_lowlevel(command, timeout)
 			except EOFError:
 				retries_remaining = retries_remaining - 1
-				print "Got EOFError, reconnecting..."
+				print >>sys.stderr, "Got EOFError, reconnecting..."
 				self.connect_and_login()
 
 	def connect_and_login(self):
@@ -429,14 +429,14 @@ class CiscoSet(object):
 			all_devices = self.seen + neighbor_hostnames
 			all_devices_uniq = uniq(all_devices)
 			self.seen = all_devices_uniq
-			print "Seen: " + str(self.seen)
+			print >>sys.stderr, "Seen: " + str(self.seen)
 		self.save() #Save what we've found for the next time
 
 	def execute_on_all(self, command, *args):
 		"""Execute command on all devices"""
 		cpu_count = 50 #multiprocessing.cpu_count()
 		command_name = command.__name__
-		print "Process count %d" % cpu_count
+		print >>sys.stderr, "Process count %d" % cpu_count
 		pool = multiprocessing.Pool(processes=cpu_count)
 
 		results = [ pool.apply_async(execute_on_device, (host, self.port, self.username, self.password, command_name) + args) for host in self.seen if host not in self.blacklist ]
