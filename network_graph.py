@@ -9,7 +9,7 @@ telnet_port = 23
 if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
 	if len(sys.argv) < 4:
-		sys.stderr.write("Usage: " + sys.argv[0] + " username password the-missing-IP router switch\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password switch\n")
 		sys.exit(-1)
 
 	username	= str(sys.argv[1])
@@ -26,5 +26,5 @@ if __name__ == '__main__':
 
 	print "digraph \"" + switch_hostname + "\" {"
 	for neighbor in neighbors:
-		print "\"" + neighbor["hostname"] + "\" -> \"" + neighbor["deviceid"] + "\""
+		print "\"" + neighbor["hostname"] + "\" -> \"" + neighbor["deviceid"] + "\" [ label=\"" + neighbor["interface"] + "\" ];"
 	print "}"
