@@ -9,7 +9,8 @@ telnet_port = 23
 if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
 	if len(sys.argv) < 4:
-		sys.stderr.write("Usage: " + sys.argv[0] + " username password switch\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password switch > graph.dot\n")
+		sys.stderr.write("dot -Tsvg -Kdot -o graph.svg graph.dot\n")
 		sys.exit(-1)
 
 	username	= str(sys.argv[1])
