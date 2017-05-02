@@ -14,34 +14,40 @@ def get_vlan_name(vlan_list, vlan_id):
 		if vlan["vlanid"] == str(vlan_id):
 			return vlan["vlanname"]
 
-def count_mac_addresses(mac_addresses, switch_hostname, switch_port):
+def count_mac_addresses(mac_addresses, hostname, switch_port):
 	"""Count the number of mac addresses seen on a single port"""
 	count = 0
 	for cur_mac_entry in mac_addresses:
-		if cur_mac_entry["hostname"] == switch_hostname and cur_mac_entry["port"] == switch_port:
+		if cur_mac_entry["hostname"] == hostname and cur_mac_entry["port"] == switch_port:
 			count = count + 1
 	return count
 
 if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
-	if len(sys.argv) < 5:
-		sys.stderr.write("Usage: " + sys.argv[0] + " username password first-switch-hostname the-missing-IP\n")
+	if len(sys.argv) < 6:
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password the-missing-IP router switch\n")
 		sys.exit(-1)
 
-	username = str(sys.argv[1])
-	password = str(sys.argv[2])
-	hostname = str(sys.argv[3])
-	ip = str(sys.argv[4])
+	username	= str(sys.argv[1])
+	password	= str(sys.argv[2])
+	ip		= str(sys.argv[3])
+	router_hostname	= str(sys.argv[4])
+	switch_hostname	= str(sys.argv[5])
 	port = 23
 
-	switchset = CiscoSet(username, password, hostname, port)
+
+
+	router = CiscoTelnetSession()
+	router.open(router_hostname, port, username, password)
+	arp = router.show_arp()
+
+	switchset = CiscoSet(username, password, switch_hostname, port)
 	switchset.discover_devices()
 
 	vlan_switch = CiscoTelnetSession()
-	vlan_switch.open(hostname, port, username, password)
+	vlan_switch.open(switch_hostname, port, username, password)
 	vlans = vlan_switch.show_vlan()
 
-	arp = switchset.execute_on_all(CiscoTelnetSession.show_arp)
 	mac = switchset.execute_on_all(CiscoTelnetSession.show_mac_address_table)
 
 	ip_mac = "0000.0000.0000"
