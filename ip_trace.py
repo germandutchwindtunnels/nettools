@@ -61,4 +61,4 @@ if __name__ == '__main__':
 
 	sorted_results = sorted(results, key=lambda k: k['uncertainty'])
 	json_result = json.dumps(sorted_results)
-	print json_result 
+	print json_result
