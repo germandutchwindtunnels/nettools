@@ -15,4 +15,3 @@ test: Cisco.py OutputLog.py PortConfigGui.py portconfig.py NewGui.pyw AutoUpdate
 	python -m py_compile AutoUpdate.py
 	python -m py_compile ip_trace.py
 	python -m py_compile network_graph.py
-
