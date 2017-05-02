@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 """This file is the main routine for finding IPs in a Cisco-based network"""
 import sys
-import json
-
 
 from Cisco import CiscoTelnetSession, CiscoSet
 
