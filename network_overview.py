@@ -3,7 +3,6 @@
 import sys
 import json
 
-from portconfig import fix_interfacename
 from Cisco import CiscoTelnetSession, CiscoSet
 
 telnet_port = 23
@@ -55,11 +54,11 @@ if __name__ == '__main__':
 	vlans = vlan_switch.show_vlan()
 
 	mac = switchset.execute_on_all(CiscoTelnetSession.show_mac_address_table)
-	all_ports = switchset.execute_on_all(CiscoTelnetSession.show_interface_vlan)
+	all_ports = switchset.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
 
 	port_settings = switchset.execute_on_all(CiscoTelnetSession.get_interface_vlan_setting)
 	for port_setting in port_settings:
-		port_setting["interface"] = fix_interfacename(port_setting["interface"])
+		port_setting["interface"] = CiscoTelnetSession.fix_interfacename(port_setting["interface"])
 
 	for mac_entry in mac:
 		mac_entry.pop("macaddress_type") #Remove uninteresting info before printing
@@ -67,5 +66,5 @@ if __name__ == '__main__':
 		mac_entry["vlanname"] = get_vlan_name(vlans, mac_entry["vlanid"])
 		mac_entry["patchid"] = get_port_patchid(all_ports, mac_entry["hostname"], mac_entry["port"])
 
-	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports, "portsettings" : port_settings }
+	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports }
 	print json.dumps(json_list)

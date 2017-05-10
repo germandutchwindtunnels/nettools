@@ -58,6 +58,14 @@ class CiscoTelnetSession(object):
 	character_time_spacing_seconds = 0.1
 	line_time_spacing_seconds = 0.1
 
+	@staticmethod
+	def fix_interfacename(interface_name):
+		"""Fix common changes in interface naming. GigabitEthernet vs Gi"""
+		ret = interface_name.replace("GigabitEthernet", "Gi")
+		ret = ret.replace("FastEthernet", "Fa")
+		ret = ret.replace("TenGigabitEthernet", "Te")
+		return ret
+
 	def __init__(self):
 		#Info for connecting and telnet
 		self.host = ""
@@ -383,6 +391,20 @@ class CiscoTelnetSession(object):
 		command = "show run | inc (interface)|switchport access vlan" #inc can handle regex!
 		output = self.command_filter(command, regex)
 		return output
+
+	def get_interface_status_and_setting(self):
+		"""Get both status and settings for all interfaces"""
+		port_status = self.show_interface_vlan()
+		port_setting = self.get_interface_vlan_setting()
+		for port in port_status:
+			hostname = port["hostname"]
+			interface = port["interface"]
+			vlansetting = [ x["vlanconfig"] for x in port_setting if x["hostname"] == hostname and CiscoTelnetSession.fix_interfacename(x["interface"]) == interface ]
+			try:
+				port["vlanconfig"] = vlansetting[0]
+			except:
+				pass
+		return port_status
 
 class CiscoSet(object):
 	"""This class represents a set of Cisco switches, connected in a network"""

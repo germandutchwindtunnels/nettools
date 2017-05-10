@@ -66,24 +66,11 @@ def fix_patchid(patchid):
 	patchid_corrected = '-'.join(new_elements)
 	return patchid_corrected
 
-def fix_interfacename(interface_name):
-	"""Fix common changes in interface naming. GigabitEthernet vs Gi"""
-	ret = interface_name.replace("GigabitEthernet", "Gi")
-	ret = ret.replace("FastEthernet", "Fa")
-	ret = ret.replace("TenGigabitEthernet", "Te")
-	return ret
-
 def get_available_patchports(hostname, port, username, password):
 	"""Get all available patchports"""
 	switches = CiscoSet(username, password, hostname, port)
 	switches.discover_devices()
-	all_ports = switches.execute_on_all(CiscoTelnetSession.show_interface_vlan)
-	all_port_settings = switches.execute_on_all(CiscoTelnetSession.get_interface_vlan_setting)
-	for port in all_ports: #Insert VLAN settings from that request
-		hostname = port["hostname"]
-		interface = port["interface"]
-		vlansetting = [ x["vlanconfig"] for x in all_port_settings if x["hostname"] == hostname and fix_interfacename(x["interface"]) == interface ]
-		port["vlanconfig"] = vlansetting
+	all_ports = switches.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
 	all_ports_sorted = sorted(all_ports, key=lambda k : fix_patchid(k['patchid']))
 	return all_ports_sorted
 
