@@ -33,7 +33,7 @@ class CiscoTelnetSession(object):
 	regex_ip = '(?P<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
 	regex_age = '(?P<age>[0-9\-]+)'
 	regex_arptype = '(?P<arptype>ARPA)'
-	regex_vlanid = '(?P<vlanid>([0-9]+|unassigned|trunk))'
+	regex_vlanid = '(?P<vlanid>([0-9]+|unassigned|trunk|dynamic))'
 	regex_vlanname = '(?P<vlanname>[a-zA-Z][0-9a-zA-Z-_]*)'
 	regex_vlanstatus = '(?P<vlanstatus>[a-z/]+)'
 	regex_ports = '(?P<ports>[a-zA-Z0-9, /]*)'
@@ -51,6 +51,8 @@ class CiscoTelnetSession(object):
 	regex_platform = '(?P<platform>[0-9a-zA-Z-]+)'
 	regex_string = "[0-9a-zA-Z]+"
 	regex_patchid = '(?P<patchid>[a-z0-9_]+(\-|\.)[a-z0-9]+(\-|\.)[0-9]+[a-z]?)'
+	regex_vlanconfig = 'switchport access vlan ' + regex_vlanid.replace("vlanid", "vlanconfig")
+
 
 	newline = "\n"
 	character_time_spacing_seconds = 0.1
@@ -83,7 +85,7 @@ class CiscoTelnetSession(object):
 	def execute_command_lowlevel(self, command, timeout = None):
 		"""Execute a command and return the result"""
 		#print self.host + ".execute_command: " + command
-		if timeout is None:
+		if timeout == None:
 			timeout = self.response_timeout
 		commandstr = command + self.newline #.strip() + self.newline
 
@@ -372,6 +374,14 @@ class CiscoTelnetSession(object):
 		command += self.set_single_interface_trunk(interface)
 		command += "end" + self.newline
 		output = self.execute_command(command)
+		return output
+
+	def get_interface_vlan_setting(self):
+		"""Get the vlan settings for all interfaces"""
+		regex = "interface " + CiscoTelnetSession.regex_interface
+		regex += CiscoTelnetSession.regex_whitespace + CiscoTelnetSession.regex_vlanconfig
+		command = "show run | inc (interface)|switchport access vlan" #inc can handle regex!
+		output = self.command_filter(command, regex)
 		return output
 
 class CiscoSet(object):
