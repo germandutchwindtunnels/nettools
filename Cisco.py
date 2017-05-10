@@ -402,7 +402,7 @@ class CiscoTelnetSession(object):
 			vlansetting = [ x["vlanconfig"] for x in port_setting if x["hostname"] == hostname and CiscoTelnetSession.fix_interfacename(x["interface"]) == interface ]
 			try:
 				port["vlanconfig"] = vlansetting[0]
-			except:
+			except IndexError:
 				pass
 		return port_status
 
