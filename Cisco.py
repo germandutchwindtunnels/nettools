@@ -74,7 +74,7 @@ class CiscoTelnetSession(object):
 		self.password = ""
 		self.session = 0
 		self.prompt = "#"
-		self.response_timeout = 10
+		self.response_timeout = 15
 
 	def __del__(self):
 		#self.session.write("exit\n")
