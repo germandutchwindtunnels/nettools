@@ -70,7 +70,7 @@ def get_available_patchports(hostname, port, username, password):
 	"""Get all available patchports"""
 	switches = CiscoSet(username, password, hostname, port)
 	switches.discover_devices()
-	all_ports = switches.execute_on_all(CiscoTelnetSession.show_interface_vlan)
+	all_ports = switches.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
 	all_ports_sorted = sorted(all_ports, key=lambda k : fix_patchid(k['patchid']))
 	return all_ports_sorted
 

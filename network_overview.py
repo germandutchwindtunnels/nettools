@@ -3,7 +3,6 @@
 import sys
 import json
 
-
 from Cisco import CiscoTelnetSession, CiscoSet
 
 telnet_port = 23
@@ -55,7 +54,17 @@ if __name__ == '__main__':
 	vlans = vlan_switch.show_vlan()
 
 	mac = switchset.execute_on_all(CiscoTelnetSession.show_mac_address_table)
-	all_ports = switchset.execute_on_all(CiscoTelnetSession.show_interface_vlan)
+	all_ports = switchset.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
+	for port in all_ports:
+		try:
+			port["vlanname"] = get_vlan_name(vlans, port["vlanid"])
+			port["vlanconfigname"] = get_vlan_name(vlans, port["vlanconfig"])
+		except KeyError:
+			pass
+
+	port_settings = switchset.execute_on_all(CiscoTelnetSession.get_interface_vlan_setting)
+	for port_setting in port_settings:
+		port_setting["interface"] = CiscoTelnetSession.fix_interfacename(port_setting["interface"])
 
 	for mac_entry in mac:
 		mac_entry.pop("macaddress_type") #Remove uninteresting info before printing
