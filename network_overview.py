@@ -61,7 +61,6 @@ if __name__ == '__main__':
 			port["vlanconfigname"] = get_vlan_name(vlans, port["vlanconfig"])
 		except KeyError:
 			pass
-		
 
 	port_settings = switchset.execute_on_all(CiscoTelnetSession.get_interface_vlan_setting)
 	for port_setting in port_settings:
