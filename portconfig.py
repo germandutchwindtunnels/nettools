@@ -138,9 +138,9 @@ def configure_patchid(username, password, patchid, vlanname):
 if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
 	if len(sys.argv) < 3:
-		sys.stderr.write("Usage: " + sys.argv[0] + "first-switch username password    		to list all available patchports\n")
-		sys.stderr.write("Usage: " + sys.argv[0] + "first-switch username password patchnumber 	to list all available vlans\n")
-		sys.stderr.write("Usage: " + sys.argv[0] + "first-switch username password patchnumber vlan	to change the configuration of a port\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " first-switch username password    		to list all available patchports\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " first-switch username password patchnumber 	to list all available vlans\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " first-switch username password patchnumber vlan	to change the configuration of a port\n")
 		sys.exit(-1)
 
 	try:
