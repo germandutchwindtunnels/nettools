@@ -55,6 +55,13 @@ if __name__ == '__main__':
 
 	mac = switchset.execute_on_all(CiscoTelnetSession.show_mac_address_table)
 	all_ports = switchset.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
+	for port in all_ports:
+		try:
+			port["vlanname"] = get_vlan_name(vlans, port["vlanid"])
+			port["vlanconfigname"] = get_vlan_name(vlans, port["vlanconfig"])
+		except KeyError:
+			pass
+		
 
 	port_settings = switchset.execute_on_all(CiscoTelnetSession.get_interface_vlan_setting)
 	for port_setting in port_settings:
