@@ -24,15 +24,15 @@ def configure_remote_span(src_switch, src_port, src_interface, dst_switch, dst_p
 	print "Removing all references to Remote SPAN session %d on vlan %d" % (span_session_number, span_vlan)
 	switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
 
-	print "Setting source switch"
+	print "Setting source switch " + src_switch
 	source = CiscoTelnetSession()
 	source.open(src_switch, src_port, username, password)
 	source.remote_span(span_session_number, "interface " + src_interface, "remote vlan " + str(span_vlan))
 
-	print "Setting destination switch"
+	print "Setting destination switch " + dst_switch
 	dest = CiscoTelnetSession()
 	dest.open(dst_switch, dst_port, username, password)
-	source.remote_span(span_session_number, "remote vlan " + str(span_vlan), "interface " + dst_interface)
+	dest.remote_span(span_session_number, "remote vlan " + str(span_vlan), "interface " + dst_interface)
 
 	print "Done"
 

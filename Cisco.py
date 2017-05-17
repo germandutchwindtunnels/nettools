@@ -417,8 +417,6 @@ class CiscoTelnetSession(object):
 		command = "conf t\nmonitor session %d source %s\n" % (session_number, source) #source and destionation include a prefix like "interface" or "vlan"
 		command += "monitor session %d destination %s\nend\n" % (session_number, destination)
 		output = self.execute_command(command)
-		print command
-		print output
 		return output
 
 class CiscoSet(object):
