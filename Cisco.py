@@ -93,7 +93,7 @@ class CiscoTelnetSession(object):
 	def execute_command_lowlevel(self, command, timeout = None):
 		"""Execute a command and return the result"""
 		#print self.host + ".execute_command: " + command
-		if timeout == None:
+		if timeout is None:
 			timeout = self.response_timeout
 		commandstr = command + self.newline #.strip() + self.newline
 
