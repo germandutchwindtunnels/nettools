@@ -406,6 +406,21 @@ class CiscoTelnetSession(object):
 				pass
 		return port_status
 
+	def clear_remote_span(self, remote_span_session_number):
+		"""Clear the remote SPAN session"""
+		command = "conf t\nno monitor session %d\nend" % remote_span_session_number
+		output = self.execute_command(command)
+		return output
+
+	def remote_span(self, session_number, source, destination):
+		"""Create a remote SPAN session"""
+		command = "conf t\nmonitor session %d source %s\n" % (session_number, source) #source and destionation include a prefix like "interface" or "vlan"
+		command += "monitor session %d destination %s\nend\n" % (session_number, destination)
+		output = self.execute_command(command)
+		print command
+		print output
+		return output
+
 class CiscoSet(object):
 	"""This class represents a set of Cisco switches, connected in a network"""
 
