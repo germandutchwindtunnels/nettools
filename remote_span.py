@@ -23,7 +23,7 @@ def erase_remote_span_session(switchset, span_session_number):
 	switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
 	
 
-def discover_erase_span(switch, spanvlan):
+def discover_erase_span(user, pwd, switch, spanvlan):
 	"""Discover the network from switch and remote a span session"""
 	span_session_number = span_session_from_vlan(spanvlan)
 	switchset = CiscoSet(user, pwd, switch, port)
@@ -82,10 +82,10 @@ if __name__ == '__main__':
 		span_vlan	= int(sys.argv[7])
 	except IndexError:
 		pass
-	if	source_switch is not None and \
-		source_port == "clear" and \
+	if	src_switch is not None and \
+		src_port == "clear" and \
 		dst_switch is not None:
-		discover_erase_span(source_switch, dst_switch) #dst_switch is now span-vlan-nr
+		discover_erase_span(username, password, src_switch, dst_switch) #dst_switch is now span-vlan-nr
 	elif	span_vlan is None and \
 		src_switch is not None and \
 		src_port is None and \
