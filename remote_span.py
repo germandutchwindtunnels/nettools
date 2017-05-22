@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """This file is the main routine for finding IPs in a Cisco-based network"""
 import sys
+import json
 
 from Cisco import CiscoTelnetSession, CiscoSet
 from portconfig import print_list
@@ -26,9 +27,17 @@ def erase_remote_span_session(switchset, span_session_number):
 def discover_erase_span(user, pwd, switch, spanvlan):
 	"""Discover the network from switch and remote a span session"""
 	span_session_number = span_session_from_vlan(spanvlan)
-	switchset = CiscoSet(user, pwd, switch, port)
+	switchset = CiscoSet(user, pwd, switch, telnet_port)
 	switchset.discover_devices()
 	erase_remote_span_session(switchset, span_session_number)
+
+def list_span_sessions(user, pwd, switch):
+	"""Show all current span sessions"""
+	switchset = CiscoSet(user, pwd, switch, telnet_port)
+	switchset.discover_devices()
+	output = switchset.execute_on_all(CiscoTelnetSession.show_span)
+	json_output = json.dumps(output)
+	print json_output
 
 def configure_remote_span(srcswitch, srcport, srcinterface, dstswitch, dstinterface, spanvlan, user, pwd): #pylint: disable=too-many-arguments
 	"""Configure a remote span session on both switches"""
@@ -59,6 +68,7 @@ if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
 	if len(sys.argv) < 5:
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch clear span-vlan-nr\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch list\n")
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch destination-port span-vlan-nr\n")
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch destination-port\n")
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch\n")
@@ -83,6 +93,9 @@ if __name__ == '__main__':
 	except IndexError:
 		pass
 	if	src_switch is not None and \
+		src_port == "list":
+		list_span_sessions(username, password, src_switch)
+	elif	src_switch is not None and \
 		src_port == "clear" and \
 		dst_switch is not None:
 		discover_erase_span(username, password, src_switch, dst_switch) #dst_switch is now span-vlan-nr
