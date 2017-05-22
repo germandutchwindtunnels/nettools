@@ -422,7 +422,7 @@ class CiscoTelnetSession(object):
 
 	def show_span(self):
 		"""Show the active SPAN sessions on this switch"""
-		regex = CiscoTelnetSession.regex_monitor_session + ' ' 
+		regex = CiscoTelnetSession.regex_monitor_session + ' '
 		regex += CiscoTelnetSession.regex_monitor_srcdst + ' interface '
 		regex += CiscoTelnetSession.regex_interface
 		command = "show run | inc monitor session"
