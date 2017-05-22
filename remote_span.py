@@ -20,8 +20,8 @@ def span_session_from_vlan(spanvlan):
 	return span_session_number
 
 def erase_remote_span_session(switchset, span_session_number):
+	"""Erase a remote span session on a previously established CiscoSet"""
 	switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
-	
 
 def discover_erase_span(user, pwd, switch, spanvlan):
 	"""Discover the network from switch and remote a span session"""
