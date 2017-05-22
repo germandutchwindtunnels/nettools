@@ -14,17 +14,33 @@ def print_switchports(hostname, portnr, user, pwd):
 	ports = switch.show_interface_vlan()
 	print_list(ports)
 
+def span_session_from_vlan(spanvlan):
+	"""Translate a SPAN vlan number to a session number"""
+	span_session_number = (int(spanvlan) % 10) + 1 #map vlan number to a session number 1-10
+	return span_session_number
+
+def erase_remote_span_session(switchset, span_session_number):
+	switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
+	
+
+def discover_erase_span(switch, spanvlan):
+	"""Discover the network from switch and remote a span session"""
+	span_session_number = span_session_from_vlan(spanvlan)
+	switchset = CiscoSet(user, pwd, switch, port)
+	switchset.discover_devices()
+	erase_remote_span_session(switchset, span_session_number)
+
 def configure_remote_span(srcswitch, srcport, srcinterface, dstswitch, dstinterface, spanvlan, user, pwd): #pylint: disable=too-many-arguments
 	"""Configure a remote span session on both switches"""
 	dstport = srcport
-	span_session_number = (int(spanvlan) % 10) + 1 #map vlan number to a session number 1-10
 	switchset = CiscoSet(user, pwd, srcswitch, srcport)
+	span_session_number = span_session_from_vlan(spanvlan)
 
 	print "Discovering network"
 	switchset.discover_devices()
 
 	print "Removing all references to Remote SPAN session %d on vlan %d" % (span_session_number, span_vlan)
-	switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
+	erase_remote_span_session(switchset, span_session_number)
 
 	print "Setting source switch " + srcswitch
 	source = CiscoTelnetSession()
@@ -42,9 +58,12 @@ def configure_remote_span(srcswitch, srcport, srcinterface, dstswitch, dstinterf
 if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
 	if len(sys.argv) < 5:
-		sys.stderr.write("Usage: " + sys.argv[0] + " username password span-vlan-nr source-switch source-port destination-switch destination-port\n")
-		sys.stderr.write("Usage: " + sys.argv[0] + " username password span-vlan-nr source-switch\n")
-		sys.stderr.write("Usage: " + sys.argv[0] + " username password span-vlan-nr source-switch source-port destination-switch\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch clear span-vlan-nr\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch destination-port span-vlan-nr\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch destination-port\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch\n")
 		sys.exit(-1)
 
 	username	= str(sys.argv[1])
@@ -56,14 +75,18 @@ if __name__ == '__main__':
 	dst_port	= None
 	port = 23
 	try:
-		span_vlan	= int(sys.argv[3])
-		src_switch 	= str(sys.argv[4])
-		src_port 	= str(sys.argv[5])
-		dst_switch 	= str(sys.argv[6])
-		dst_port	= str(sys.argv[7])
+		src_switch 	= str(sys.argv[3])
+		src_port 	= str(sys.argv[4])
+		dst_switch 	= str(sys.argv[5])
+		dst_port	= str(sys.argv[6])
+		span_vlan	= int(sys.argv[7])
 	except IndexError:
 		pass
-	if	span_vlan is None and \
+	if	source_switch is not None and \
+		source_port == "clear" and \
+		dst_switch is not None:
+		discover_erase_span(source_switch, dst_switch) #dst_switch is now span-vlan-nr
+	elif	span_vlan is None and \
 		src_switch is not None and \
 		src_port is None and \
 		dst_switch is None and \
