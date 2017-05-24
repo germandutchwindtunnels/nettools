@@ -461,7 +461,8 @@ class NewGui(QApplication):
 
         submit = QPushButton("Submit", self._win.ports)
         submit.clicked.connect(
-            lambda checked, port = port, item = item: self._submit_pressed(port, item))
+                lambda checked, port = port, item = item:
+                       self._submit_pressed(port, item))
 
         submit.setEnabled(False)
 
