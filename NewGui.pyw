@@ -19,13 +19,13 @@
 ''' A New GUI for nettools. '''
 
 import sys, re, webbrowser
-# import pprint
+import pprint
 
 import portconfig
 
 from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
 from PyQt4.QtGui import QPushButton
-from PyQt4.QtCore import QThread, pyqtSignal
+from PyQt4.QtCore import QThread, pyqtSignal, QVariant
 import PyQt4.uic as uic
 
 class WorkerThread(QThread):
@@ -113,8 +113,53 @@ class MyComboBox(QComboBox):
 
         event.ignore()
 
+    def fill(self, data):
+        assert isinstance(data, list)
+
+        self.clear()
+
+        for i, (vlan, label) in enumerate(data):
+            self.addItem(str(label))
+            self.setItemData(i, vlan)
+
+    def selectData(self, data):
+        """ Select the entry that has data field <data>. """
+
+        index = self.findData(QVariant(data))
+
+        if index == self.currentIndex():
+            return
+        elif index == -1:
+            self.selectData(None)
+        else:
+            self.setCurrentIndex(index)
+
+    def itemData(self, index):
+        """ Return the data field associated with the <index>'th field. """
+
+        variant = QComboBox.itemData(self, index)
+
+        if variant.type() == QVariant.Int:
+            return variant.toInt()[0]
+        elif variant.type() == QVariant.String:
+            return str(variant.toString())
+        else:
+            return None
+
+    def currentData(self):
+        """ Return the data field associated with the currently selected field. """
+
+        return self.itemData(self.currentIndex())
+
 class NewGui(QApplication):
     ''' Port Configurator GUI. '''
+
+    COL_PATCH  = 0
+    COL_SWITCH = 1
+    COL_PORT   = 2
+    COL_VLAN   = 3
+    COL_COMBO  = 4
+    COL_SUBMIT = 5
 
     def __init__(self, args):
         ''' Initialisation. '''
@@ -124,9 +169,9 @@ class NewGui(QApplication):
         self._ports = [ ]
         self._vlans = [ ]
 
-        self._vlan_id_to_label = { }
-
         self._msg_box = None
+
+        self._changes = [ ]
 
         self._get_config_thread = None
         self._set_config_thread = None
@@ -148,6 +193,7 @@ class NewGui(QApplication):
         self._win.buttonBugReport.clicked.connect(self._report_bug)
 
         self._win.statusbar.hide()
+        self._win.ports.hideColumn(NewGui.COL_VLAN)
 
         self._win.show()
 
@@ -169,12 +215,13 @@ class NewGui(QApplication):
         self._ports = data['ports']
         self._vlans = data['vlans']
 
-        self._vlan_id_to_label = { }
+        self._labels = [ ( None, u'invalid' ) ]
 
-        for i, vlan in enumerate(self._vlans):
-            vlan['label'] = '%s (%s)' % (vlan['vlanid'], vlan['vlanname'])
+        for vlan in self._vlans:
+            vlanid = vlan['vlanid']
+            label  = '%s (%s)' % (vlanid, vlan['vlanname'])
 
-            self._vlan_id_to_label[vlan['vlanid']] = i
+            self._labels.append( ( vlanid, label ) )
 
         for i, port in enumerate(self._ports):
             if port['vlanid'] == 'unassigned':
@@ -221,10 +268,8 @@ class NewGui(QApplication):
         self._get_config_thread = GetConfigurationThread(self._host,
                                                          self._user,
                                                          self._pass)
-        self._get_config_thread.newData.connect(
-            self._handle_new_data)
-        self._get_config_thread.finished.connect(
-            self._get_config_thread_finished)
+        self._get_config_thread.newData.connect(self._handle_new_data)
+        self._get_config_thread.finished.connect(self._get_config_thread_finished)
         self._get_config_thread.start()
 
     def _resize(self):
@@ -244,6 +289,19 @@ class NewGui(QApplication):
 
         self._resize()
 
+    def _reset_children(self, item):
+      for index in range(item.childCount()):
+        child = item.child(index)
+
+        if child.childCount() == 0:
+          new_vlan_id = str(self._win.ports.itemWidget(child, NewGui.COL_COMBO).currentData())
+          child.setText(NewGui.COL_VLAN, new_vlan_id)
+
+          button = self._win.ports.itemWidget(child, NewGui.COL_SUBMIT)
+          button.setEnabled(False)
+        else:
+          self._reset_children(child)
+
     def _set_config_thread_finished(self):
         ''' Handle completion of the SetConfigurationThread. '''
 
@@ -254,25 +312,43 @@ class NewGui(QApplication):
             self._msg_box.deleteLater()
             self._msg_box = None
 
+        self._reset_children(self._win.ports.invisibleRootItem())
+
+        self._changes = [ ]
+
+        self._win.buttonSubmitAll.setEnabled(False)
+
+    def _vlan_selected(self, index, item):
+      vlan_combo = self._win.ports.itemWidget(item, NewGui.COL_COMBO)
+      submit_button = self._win.ports.itemWidget(item, NewGui.COL_SUBMIT)
+
+      cur_vlan = str(item.text(NewGui.COL_VLAN))
+      new_vlan = str(vlan_combo.itemData(index))
+
+      submit_button.setEnabled(new_vlan != cur_vlan)
+
+      if new_vlan == cur_vlan and item in self._changes:
+        self._changes.remove(item)
+      elif new_vlan != cur_vlan and item not in self._changes:
+        self._changes.append(item)
+
+      self._win.buttonSubmitAll.setEnabled(len(self._changes) > 0)
+
     def _submit_pressed(self, port, item):
         ''' The user has pressed the Submit button for <port> in QTreeWidgetItem
             <item>. Handle this.'''
 
-        current_index = self._win.ports.itemWidget(item, 3).currentIndex()
-
         switch_host = port['hostname']
         switch_port = port['interface']
-        old_vlan_id = port['vlanid']
-        new_vlan_id = self._vlans[current_index - 1]['vlanid']
+        old_vlan_id = str(item.text(NewGui.COL_VLAN))
+        new_vlan_id = str(self._win.ports.itemWidget(item, NewGui.COL_COMBO).currentData())
 
         self._show_message('Setting port %s to vlan %s; please wait.' %
                            (port['patchid'], new_vlan_id))
 
         self._set_config_thread = SetConfigurationThread(self._user, self._pass)
-        self._set_config_thread.addJob(switch_host, switch_port,
-                                       old_vlan_id, new_vlan_id)
-        self._set_config_thread.finished.connect(
-            self._set_config_thread_finished)
+        self._set_config_thread.addJob(switch_host, switch_port, old_vlan_id, new_vlan_id)
+        self._set_config_thread.finished.connect(self._set_config_thread_finished)
         self._set_config_thread.start()
 
     def _submit_all(self):
@@ -287,13 +363,13 @@ class NewGui(QApplication):
         for port in self._ports:
             item = port['item']
 
-            current_index = self._win.ports.itemWidget(item, 3).currentIndex()
+            current_data = self._win.ports.itemWidget(item, NewGui.COL_COMBO).currentData()
 
-            if current_index == 0:
+            if current_data is None:
                 continue
 
-            old_vlan_id = port['vlanid']
-            new_vlan_id = self._vlans[current_index - 1]['vlanid']
+            old_vlan_id = str(item.text(NewGui.COL_VLAN))
+            new_vlan_id = str(current_data)
 
             if new_vlan_id != old_vlan_id:
                 self._set_config_thread.addJob(port['hostname'],
@@ -324,47 +400,53 @@ class NewGui(QApplication):
     def _add_to_tree(self, port):
         ''' Add an entry for port <port> to the QTreeWidget, '''
 
+        # Start at the root of the tree.
         item = self._win.ports.invisibleRootItem()
 
+        # Split the patch id into segments, and for every segment...
         for id_segment in re.split('[_-]', port['patchid']):
             id_segment_to_index = { }
 
+            # Get the names of all the child items at the current tree level...
             for i in range(item.childCount()):
-                segment_name = str(item.child(i).text(0))
+                segment_name = str(item.child(i).text(NewGui.COL_PATCH))
 
                 id_segment_to_index[segment_name] = i
 
+            # If there already is a child item for this segment...
             if id_segment in id_segment_to_index:
+                # then select that child to follow,
                 child_index = id_segment_to_index[id_segment]
                 child = item.child(child_index)
             else:
+                # otherwise create and select a new child.
                 child = QTreeWidgetItem(item, [ id_segment ])
                 item.addChild(child)
 
+            # Make the selected child the current item and do it all again.
             item = child
 
-        item.setText(1, port['hostname'])
-        item.setText(2, port['interface'])
+        item.setText(NewGui.COL_SWITCH, port['hostname'])
+        item.setText(NewGui.COL_PORT, port['interface'])
+        item.setText(NewGui.COL_VLAN, port['vlanid'])
 
         combo_box = MyComboBox(self._win.ports)
 
-        combo_box.addItem('invalid')
-        combo_box.addItems( [ vlan['label'] for vlan in self._vlans ] )
+        combo_box.fill(self._labels)
+        combo_box.selectData(port['vlanid'])
 
-        try:
-            label_index = self._vlan_id_to_label[port['vlanid']]
-        except KeyError:
-            combo_box.setCurrentIndex(0)
-        else:
-            combo_box.setCurrentIndex(label_index + 1)
+        self._win.ports.setItemWidget(item, NewGui.COL_COMBO, combo_box)
 
-        self._win.ports.setItemWidget(item, 3, combo_box)
+        combo_box.currentIndexChanged.connect(
+            lambda index, item = item: self._vlan_selected(index, item))
 
         submit = QPushButton("Submit", self._win.ports)
-        submit.clicked.connect(lambda checked, port = port, item = item:
-                               self._submit_pressed(port, item))
+        submit.clicked.connect(
+            lambda checked, port = port, item = item: self._submit_pressed(port, item))
 
-        self._win.ports.setItemWidget(item, 4, submit)
+        submit.setEnabled(False)
+
+        self._win.ports.setItemWidget(item, NewGui.COL_SUBMIT, submit)
 
         return item
 
