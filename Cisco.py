@@ -44,7 +44,7 @@ class CiscoTelnetSession(object):
 	regex_optionalwhitespace = '\s*'
 	regex_deviceid = '(?P<deviceid>[.0-9A-Za-z-]+)'
 	regex_lldp_deviceid = '(?P<deviceid>[.0-9A-Za-z-]{1,20})'
-	regex_interface = '(?P<interface>(Gi|Fa|Te)[a-zA-Z]*\s*[0-9]/[0-9](/[0-9]{1,2})?)'
+	regex_interface = '(?P<interface>((Gi|Fa|Te)[a-zA-Z]*\s*[0-9]/[0-9](/[0-9]{1,2})?)|(vlan) [0-9]+)'
 	regex_portid = regex_interface.replace("interface", "portid")
 	regex_holdtime = '(?P<holdtime>[0-9]+)'
 	regex_capabilities = '(?P<capabilities>([RTBSHIrP],?\s?)+)'
@@ -53,7 +53,7 @@ class CiscoTelnetSession(object):
 	regex_patchid = '(?P<patchid>[a-z0-9_]+(\-|\.)[a-z0-9]+(\-|\.)[0-9]+[a-z]?)'
 	regex_vlanconfig = 'switchport access vlan ' + regex_vlanid.replace("vlanid", "vlanconfig")
 	regex_monitor_session = 'monitor session (?P<monitor_session>[0-9]+)'
-	regex_monitor_srcdst = '(?P<src_dst>(source|destination))'
+	regex_monitor_srcdst = '(?P<src_dst>(source|destination))\s*(remote|interface)\s*'
 
 	newline = "\n"
 	character_time_spacing_seconds = 0.1
@@ -423,7 +423,7 @@ class CiscoTelnetSession(object):
 	def show_span(self):
 		"""Show the active SPAN sessions on this switch"""
 		regex = CiscoTelnetSession.regex_monitor_session + ' '
-		regex += CiscoTelnetSession.regex_monitor_srcdst + ' interface '
+		regex += CiscoTelnetSession.regex_monitor_srcdst
 		regex += CiscoTelnetSession.regex_interface
 		command = "show run | inc monitor session"
 		output = self.command_filter(command, regex)
