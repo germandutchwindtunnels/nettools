@@ -30,6 +30,9 @@ def discover_erase_span(user, pwd, switch, spanvlan):
 	switchset = CiscoSet(user, pwd, switch, telnet_port)
 	switchset.discover_devices()
 	erase_remote_span_session(switchset, span_session_number)
+	output = switchset.execute_on_all(CiscoTelnetSession.show_span)
+	json_output = json.dumps(output)
+	print json_output
 
 def list_span_sessions(user, pwd, switch):
 	"""Show all current span sessions"""

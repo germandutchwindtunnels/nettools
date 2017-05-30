@@ -30,3 +30,12 @@ The application needs to be started with the following command:
 
 -or-
 * python PortConfigGui.py _username password first-switch_
+
+Keep in mind, there are several seperate functionalities / tools not implemented into the GUI
+
+For instance:
+* python remote_span _username password first-switch_ list
+* python network_overview.py _username password router first-switch_
+* python network_graph.py _username password first-switch_ > graph.dot && dot -Tsvg -Kdot -o graph.svg graph.dot
+
+

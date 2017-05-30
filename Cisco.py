@@ -455,6 +455,8 @@ class CiscoSet(object):
 				return 0
 		except IOError:
 			pass
+		except OSError:
+			return 0
 		
 		seen = self.seen
 		try:
@@ -462,6 +464,7 @@ class CiscoSet(object):
 			json_contents = fd.read()
 			json_decoded = json.loads(json_contents)
 			self.seen = json_decoded
+			return len(self.seen)
 		except IOError:
 			pass #Doesn't matter, we'll create it on save
 		except ValueError:
@@ -473,8 +476,6 @@ class CiscoSet(object):
 		fd = open(filename, "w+")
 		json_contents = json.dumps(self.seen)
 		fd.write(json_contents)
-
-
 
 	def set_blacklist(self, blacklist):
 		"""Don't connect to these hosts"""
@@ -497,10 +498,10 @@ class CiscoSet(object):
 
 	def execute_on_all(self, command, *args):
 		"""Execute command on all devices"""
-		cpu_count = 50 #multiprocessing.cpu_count()
+		cpu_count = 25 #multiprocessing.cpu_count()
 		command_name = command.__name__
 		print >>sys.stderr, "Process count %d" % cpu_count
-		pool = multiprocessing.Pool.ThreadPool(processes=cpu_count)
+		pool = multiprocessing.Pool(cpu_count)
 
 		results = [ pool.apply_async(execute_on_device, (host, self.port, self.username, self.password, command_name) + args) for host in self.seen if host not in self.blacklist ]
 		ret = [ ]
