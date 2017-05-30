@@ -45,7 +45,7 @@ class CiscoTelnetSession(object):
 	regex_optionalwhitespace = '\s*'
 	regex_deviceid = '(?P<deviceid>[.0-9A-Za-z-]+)'
 	regex_lldp_deviceid = '(?P<deviceid>[.0-9A-Za-z-]{1,20})'
-	regex_interface = '(?P<interface>(Gi|Fa|Te)[a-zA-Z]*\s*[0-9]/[0-9](/[0-9]{1,2})?)'
+	regex_interface = '(?P<interface>((Gi|Fa|Te)[a-zA-Z]*\s*[0-9]/[0-9](/[0-9]{1,2})?)|(vlan) [0-9]+)'
 	regex_portid = regex_interface.replace("interface", "portid")
 	regex_holdtime = '(?P<holdtime>[0-9]+)'
 	regex_capabilities = '(?P<capabilities>([RTBSHIrP],?\s?)+)'
@@ -53,7 +53,8 @@ class CiscoTelnetSession(object):
 	regex_string = "[0-9a-zA-Z]+"
 	regex_patchid = '(?P<patchid>[a-z0-9_]+(\-|\.)[a-z0-9]+(\-|\.)[0-9]+[a-z]?)'
 	regex_vlanconfig = 'switchport access vlan ' + regex_vlanid.replace("vlanid", "vlanconfig")
-
+	regex_monitor_session = 'monitor session (?P<monitor_session>[0-9]+)'
+	regex_monitor_srcdst = '(?P<src_dst>(source|destination))\s*(remote|interface)\s*'
 
 	newline = "\n"
 	character_time_spacing_seconds = 0.1
@@ -94,7 +95,7 @@ class CiscoTelnetSession(object):
 	def execute_command_lowlevel(self, command, timeout = None):
 		"""Execute a command and return the result"""
 		#print self.host + ".execute_command: " + command
-		if timeout == None:
+		if timeout is None:
 			timeout = self.response_timeout
 		commandstr = command + self.newline #.strip() + self.newline
 
@@ -406,6 +407,28 @@ class CiscoTelnetSession(object):
 			except IndexError:
 				pass
 		return port_status
+
+	def clear_remote_span(self, remote_span_session_number):
+		"""Clear the remote SPAN session"""
+		command = "conf t\nno monitor session %d\nend" % remote_span_session_number
+		output = self.execute_command(command)
+		return output
+
+	def remote_span(self, session_number, source, destination):
+		"""Create a remote SPAN session"""
+		command = "conf t\nmonitor session %d source %s\n" % (session_number, source) #source and destionation include a prefix like "interface" or "vlan"
+		command += "monitor session %d destination %s\nend\n" % (session_number, destination)
+		output = self.execute_command(command)
+		return output
+
+	def show_span(self):
+		"""Show the active SPAN sessions on this switch"""
+		regex = CiscoTelnetSession.regex_monitor_session + ' '
+		regex += CiscoTelnetSession.regex_monitor_srcdst
+		regex += CiscoTelnetSession.regex_interface
+		command = "show run | inc monitor session"
+		output = self.command_filter(command, regex)
+		return output
 
 class CiscoSet(object):
 	"""This class represents a set of Cisco switches, connected in a network"""

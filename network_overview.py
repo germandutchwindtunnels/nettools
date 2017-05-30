@@ -72,5 +72,5 @@ if __name__ == '__main__':
 		mac_entry["vlanname"] = get_vlan_name(vlans, mac_entry["vlanid"])
 		mac_entry["patchid"] = get_port_patchid(all_ports, mac_entry["hostname"], mac_entry["port"])
 
-	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports }
+	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports, "vlans" : vlans }
 	print json.dumps(json_list)
