@@ -428,6 +428,7 @@ class CiscoSet(object):
 		filename = self.get_serialize_filename()
 		try:
 			filetime = os.path.getmtime(filename)
+			if time.time() - filetime > (24 * 60 * 60): # If the file containing neighbours is older than one day, we have to make a new one
 				return 0
 		except IOError:
 			pass
