@@ -25,6 +25,7 @@ import time
 import json
 import sys
 import socket
+import os
 
 class CiscoTelnetSession(object):
 	"""This class provides the interface to a Cisco router/switch over Telnet"""
@@ -425,6 +426,12 @@ class CiscoSet(object):
 	def load(self):
 		"""Load from file"""
 		filename = self.get_serialize_filename()
+		try:
+			filetime = os.path.getmtime(filename)
+				return 0
+		except IOError:
+			pass
+		
 		seen = self.seen
 		try:
 			fd = open(filename, "r")
@@ -451,8 +458,8 @@ class CiscoSet(object):
 
 	def discover_devices(self):
 		'''Discover all networking devices, using a depth-first search.'''
-		self.load() #Attempt to bootstrap using a saved json file
-		last_count = 0
+		last_count = self.load() #Attempt to bootstrap using a saved json file
+		#last_count = 0
 		while last_count != len(self.seen):
 			last_count = len(self.seen)
 			outputs = self.execute_on_all(CiscoTelnetSession.show_neighbors)
@@ -469,7 +476,7 @@ class CiscoSet(object):
 		cpu_count = 50 #multiprocessing.cpu_count()
 		command_name = command.__name__
 		print >>sys.stderr, "Process count %d" % cpu_count
-		pool = multiprocessing.Pool(processes=cpu_count)
+		pool = multiprocessing.Pool.ThreadPool(processes=cpu_count)
 
 		results = [ pool.apply_async(execute_on_device, (host, self.port, self.username, self.password, command_name) + args) for host in self.seen if host not in self.blacklist ]
 		ret = [ ]
