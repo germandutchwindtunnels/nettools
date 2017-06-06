@@ -71,6 +71,8 @@ if __name__ == '__main__':
 		mac_entry["uncertainty"] = count_mac_addresses(mac, mac_entry["hostname"], mac_entry["port"])
 		mac_entry["vlanname"] = get_vlan_name(vlans, mac_entry["vlanid"])
 		mac_entry["patchid"] = get_port_patchid(all_ports, mac_entry["hostname"], mac_entry["port"])
+	    
+	rspan = switchset.execute_on_all(CiscoTelnetSession.show_span)
 
-	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports, "vlans" : vlans }
+	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports, "vlans" : vlans, "rspan" : rspan }
 	print json.dumps(json_list)

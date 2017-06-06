@@ -24,9 +24,9 @@ def erase_remote_span_session(switchset, span_session_number):
 	"""Erase a remote span session on a previously established CiscoSet"""
 	switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
 
-def discover_erase_span(user, pwd, switch, spanvlan):
+def discover_erase_span(user, pwd, switch, spansession):
 	"""Discover the network from switch and remote a span session"""
-	span_session_number = span_session_from_vlan(spanvlan)
+	span_session_number = spansession
 	switchset = CiscoSet(user, pwd, switch, telnet_port)
 	switchset.discover_devices()
 	erase_remote_span_session(switchset, span_session_number)
@@ -48,23 +48,29 @@ def configure_remote_span(srcswitch, srcport, srcinterface, dstswitch, dstinterf
 	switchset = CiscoSet(user, pwd, srcswitch, srcport)
 	span_session_number = span_session_from_vlan(spanvlan)
 
-	print "Discovering network"
+	#print "Discovering network"
 	switchset.discover_devices()
 
-	print "Removing all references to Remote SPAN session %d on vlan %d" % (span_session_number, span_vlan)
+	#print "Removing all references to Remote SPAN session %d on vlan %d" % (span_session_number, span_vlan)
 	erase_remote_span_session(switchset, span_session_number)
+	if srcswitch == dstswitch: # No Remote needed on the same switch.
+		source = CiscoTelnetSession()
+		source.open(srcswitch, srcport, user, pwd)
+		source.remote_span(span_session_number, "interface " + srcinterface, "interface " + dstinterface)
+	else:
+		#print "Setting source switch " + srcswitch
+		source = CiscoTelnetSession()
+		source.open(srcswitch, srcport, user, pwd)
+		source.remote_span(span_session_number, "interface " + srcinterface, "remote vlan " + str(spanvlan))
 
-	print "Setting source switch " + srcswitch
-	source = CiscoTelnetSession()
-	source.open(srcswitch, srcport, user, pwd)
-	source.remote_span(span_session_number, "interface " + srcinterface, "remote vlan " + str(spanvlan))
+		#print "Setting destination switch " + dstswitch
+		dest = CiscoTelnetSession()
+		dest.open(dstswitch, dstport, user, pwd)
+		dest.remote_span(span_session_number, "remote vlan " + str(spanvlan), "interface " + dstinterface)
 
-	print "Setting destination switch " + dstswitch
-	dest = CiscoTelnetSession()
-	dest.open(dstswitch, dstport, user, pwd)
-	dest.remote_span(span_session_number, "remote vlan " + str(spanvlan), "interface " + dstinterface)
-
-	print "Done"
+	output = switchset.execute_on_all(CiscoTelnetSession.show_span)
+	json_output = json.dumps(output)
+	print json_output
 
 
 if __name__ == '__main__':
