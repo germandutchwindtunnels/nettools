@@ -15,18 +15,13 @@ def print_switchports(hostname, portnr, user, pwd):
 	ports = switch.show_interface_vlan()
 	print_list(ports)
 
-def span_session_from_vlan(spanvlan):
-	"""Translate a SPAN vlan number to a session number"""
-	span_session_number = (int(spanvlan) % 10) + 1 #map vlan number to a session number 1-10
-	return span_session_number
-
 def erase_remote_span_session(switchset, span_session_number):
 	"""Erase a remote span session on a previously established CiscoSet"""
 	switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
 
 def discover_erase_span(user, pwd, switch, spansession):
 	"""Discover the network from switch and remote a span session"""
-	span_session_number = spansession
+	span_session_number = int(spansession)
 	switchset = CiscoSet(user, pwd, switch, telnet_port)
 	switchset.discover_devices()
 	erase_remote_span_session(switchset, span_session_number)
@@ -46,7 +41,7 @@ def configure_remote_span(srcswitch, srcport, srcinterface, dstswitch, dstinterf
 	"""Configure a remote span session on both switches"""
 	dstport = srcport
 	switchset = CiscoSet(user, pwd, srcswitch, srcport)
-	span_session_number = span_session_from_vlan(spanvlan)
+	span_session_number = spanvlan
 
 	#print "Discovering network"
 	switchset.discover_devices()
@@ -76,9 +71,9 @@ def configure_remote_span(srcswitch, srcport, srcinterface, dstswitch, dstinterf
 if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
 	if len(sys.argv) < 5:
-		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch clear span-vlan-nr\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch clear session-nr\n")
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch list\n")
-		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch destination-port span-vlan-nr\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch destination-port session-nr\n")
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch destination-port\n")
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port destination-switch\n")
 		sys.stderr.write("Usage: " + sys.argv[0] + " username password source-switch source-port\n")

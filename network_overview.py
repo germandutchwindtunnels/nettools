@@ -74,5 +74,7 @@ if __name__ == '__main__':
 	    
 	rspan = switchset.execute_on_all(CiscoTelnetSession.show_span)
 
-	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports, "vlans" : vlans, "rspan" : rspan }
+	neighbors = switchset.execute_on_all(CiscoTelnetSession.show_neighbors)
+
+	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports, "vlans" : vlans, "rspan" : rspan, "neighbors" : neighbors}
 	print json.dumps(json_list)
