@@ -24,7 +24,7 @@ import sys, re, webbrowser
 import portconfig
 
 from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
-from PyQt4.QtGui import QPushButton
+from PyQt4.QtGui import QPushButton, QPalette, QColor
 from PyQt4.QtCore import QThread, pyqtSignal, QVariant
 import PyQt4.uic as uic
 
@@ -168,7 +168,7 @@ class NewGui(QApplication):
 
     def __init__(self, args):
         ''' Initialisation. '''
-
+        print "Starting"
         QApplication.__init__(self, args)
 
         self._ports = [ ]
@@ -183,15 +183,27 @@ class NewGui(QApplication):
         self._get_config_thread = None
         self._set_config_thread = None
 
-        if len(args) == 4:
-            self._user = args[1]
-            self._pass = args[2]
-            self._host = args[3]
-        else:
-            self._usage(-1)
+        self._win = uic.loadUi("Login.ui")
+        
+        self._win.LoginButton.clicked.connect(self._login)
+        self._win.UserName.returnPressed.connect(self._win.LoginButton.click)
+        self._win.Password.returnPressed.connect(self._win.LoginButton.click)
+        self._win.HostName.returnPressed.connect(self._win.LoginButton.click)
+        
+        self._win.show()
 
+    def _login(self):
+        self._user = str(self._win.UserName.text())
+        self._pass = str(self._win.Password.text())
+        self._host = str(self._win.HostName.text())
+        if(self._host == "" or self._user == "" or self._pass == ""):
+            self._win.errorBox.document().setPlainText("Please make sure to fill in all the variables")
+            pal = QPalette()
+            bgc = QColor(255, 0, 0)
+            pal.setColor(QPalette.Base, bgc)
+            self._win.errorBox.setPalette(pal)
+            return
         self._win = uic.loadUi("NewGui.ui")
-
         self._win.ports.itemExpanded.connect(lambda item: self._resize())
         self._win.ports.itemCollapsed.connect(lambda item: self._resize())
 
@@ -205,7 +217,7 @@ class NewGui(QApplication):
         self._win.show()
 
         self._get_configuration()
-
+        
     @staticmethod
     def _usage(exit_code):
         ''' Show usage and exit with <exit_code>. '''
