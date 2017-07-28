@@ -70,7 +70,7 @@ def get_available_patchports(hostname, port, username, password):
 	"""Get all available patchports"""
 	switches = CiscoSet(username, password, hostname, port)
 	switches.discover_devices()
-	all_ports = switches.execute_on_all(CiscoTelnetSession.show_interface_vlan)
+	all_ports = switches.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
 	all_ports_sorted = sorted(all_ports, key=lambda k : fix_patchid(k['patchid']))
 	return all_ports_sorted
 
@@ -138,9 +138,9 @@ def configure_patchid(username, password, patchid, vlanname):
 if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
 	if len(sys.argv) < 3:
-		sys.stderr.write("Usage: " + sys.argv[0] + "first-switch username password    		to list all available patchports\n")
-		sys.stderr.write("Usage: " + sys.argv[0] + "first-switch username password patchnumber 	to list all available vlans\n")
-		sys.stderr.write("Usage: " + sys.argv[0] + "first-switch username password patchnumber vlan	to change the configuration of a port\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " first-switch username password    		to list all available patchports\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " first-switch username password patchnumber 	to list all available vlans\n")
+		sys.stderr.write("Usage: " + sys.argv[0] + " first-switch username password patchnumber vlan	to change the configuration of a port\n")
 		sys.exit(-1)
 
 	try:

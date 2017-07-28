@@ -33,7 +33,7 @@ class CiscoTelnetSession(object):
 	regex_ip = '(?P<ip>[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})'
 	regex_age = '(?P<age>[0-9\-]+)'
 	regex_arptype = '(?P<arptype>ARPA)'
-	regex_vlanid = '(?P<vlanid>([0-9]+|unassigned|trunk))'
+	regex_vlanid = '(?P<vlanid>([0-9]+|unassigned|trunk|dynamic))'
 	regex_vlanname = '(?P<vlanname>[a-zA-Z][0-9a-zA-Z-_]*)'
 	regex_vlanstatus = '(?P<vlanstatus>[a-z/]+)'
 	regex_ports = '(?P<ports>[a-zA-Z0-9, /]*)'
@@ -44,17 +44,28 @@ class CiscoTelnetSession(object):
 	regex_optionalwhitespace = '\s*'
 	regex_deviceid = '(?P<deviceid>[.0-9A-Za-z-]+)'
 	regex_lldp_deviceid = '(?P<deviceid>[.0-9A-Za-z-]{1,20})'
-	regex_interface = '(?P<interface>(Gi|Fa|Te)[a-zA-Z]*\s*[0-9]/[0-9](/[0-9]{1,2})?)'
+	regex_interface = '(?P<interface>((Gi|Fa|Te)[a-zA-Z]*\s*[0-9]/[0-9](/[0-9]{1,2})?)|(vlan) [0-9]+)'
 	regex_portid = regex_interface.replace("interface", "portid")
 	regex_holdtime = '(?P<holdtime>[0-9]+)'
 	regex_capabilities = '(?P<capabilities>([RTBSHIrP],?\s?)+)'
 	regex_platform = '(?P<platform>[0-9a-zA-Z-]+)'
 	regex_string = "[0-9a-zA-Z]+"
 	regex_patchid = '(?P<patchid>[a-z0-9_]+(\-|\.)[a-z0-9]+(\-|\.)[0-9]+[a-z]?)'
+	regex_vlanconfig = 'switchport access vlan ' + regex_vlanid.replace("vlanid", "vlanconfig")
+	regex_monitor_session = 'monitor session (?P<monitor_session>[0-9]+)'
+	regex_monitor_srcdst = '(?P<src_dst>(source|destination))\s*(remote|interface)\s*'
 
 	newline = "\n"
 	character_time_spacing_seconds = 0.1
 	line_time_spacing_seconds = 0.1
+
+	@staticmethod
+	def fix_interfacename(interface_name):
+		"""Fix common changes in interface naming. GigabitEthernet vs Gi"""
+		ret = interface_name.replace("GigabitEthernet", "Gi")
+		ret = ret.replace("FastEthernet", "Fa")
+		ret = ret.replace("TenGigabitEthernet", "Te")
+		return ret
 
 	def __init__(self):
 		#Info for connecting and telnet
@@ -64,7 +75,7 @@ class CiscoTelnetSession(object):
 		self.password = ""
 		self.session = 0
 		self.prompt = "#"
-		self.response_timeout = 10
+		self.response_timeout = 15
 
 	def __del__(self):
 		#self.session.write("exit\n")
@@ -83,7 +94,7 @@ class CiscoTelnetSession(object):
 	def execute_command_lowlevel(self, command, timeout = None):
 		"""Execute a command and return the result"""
 		#print self.host + ".execute_command: " + command
-		if timeout == None:
+		if timeout is None:
 			timeout = self.response_timeout
 		commandstr = command + self.newline #.strip() + self.newline
 
@@ -101,7 +112,7 @@ class CiscoTelnetSession(object):
 				return self.execute_command_lowlevel(command, timeout)
 			except EOFError:
 				retries_remaining = retries_remaining - 1
-				print "Got EOFError, reconnecting..."
+				print >>sys.stderr, "Got EOFError, reconnecting..."
 				self.connect_and_login()
 
 	def connect_and_login(self):
@@ -374,6 +385,50 @@ class CiscoTelnetSession(object):
 		output = self.execute_command(command)
 		return output
 
+	def get_interface_vlan_setting(self):
+		"""Get the vlan settings for all interfaces"""
+		regex = "interface " + CiscoTelnetSession.regex_interface
+		regex += CiscoTelnetSession.regex_whitespace + CiscoTelnetSession.regex_vlanconfig
+		command = "show run | inc (interface)|switchport access vlan" #inc can handle regex!
+		output = self.command_filter(command, regex)
+		return output
+
+	def get_interface_status_and_setting(self):
+		"""Get both status and settings for all interfaces"""
+		port_status = self.show_interface_vlan()
+		port_setting = self.get_interface_vlan_setting()
+		for port in port_status:
+			hostname = port["hostname"]
+			interface = port["interface"]
+			vlansetting = [ x["vlanconfig"] for x in port_setting if x["hostname"] == hostname and CiscoTelnetSession.fix_interfacename(x["interface"]) == interface ]
+			try:
+				port["vlanconfig"] = vlansetting[0]
+			except IndexError:
+				pass
+		return port_status
+
+	def clear_remote_span(self, remote_span_session_number):
+		"""Clear the remote SPAN session"""
+		command = "conf t\nno monitor session %d\nend" % remote_span_session_number
+		output = self.execute_command(command)
+		return output
+
+	def remote_span(self, session_number, source, destination):
+		"""Create a remote SPAN session"""
+		command = "conf t\nmonitor session %d source %s\n" % (session_number, source) #source and destionation include a prefix like "interface" or "vlan"
+		command += "monitor session %d destination %s\nend\n" % (session_number, destination)
+		output = self.execute_command(command)
+		return output
+
+	def show_span(self):
+		"""Show the active SPAN sessions on this switch"""
+		regex = CiscoTelnetSession.regex_monitor_session + ' '
+		regex += CiscoTelnetSession.regex_monitor_srcdst
+		regex += CiscoTelnetSession.regex_interface
+		command = "show run | inc monitor session"
+		output = self.command_filter(command, regex)
+		return output
+
 class CiscoSet(object):
 	"""This class represents a set of Cisco switches, connected in a network"""
 
@@ -429,14 +484,14 @@ class CiscoSet(object):
 			all_devices = self.seen + neighbor_hostnames
 			all_devices_uniq = uniq(all_devices)
 			self.seen = all_devices_uniq
-			print "Seen: " + str(self.seen)
+			print >>sys.stderr, "Seen: " + str(self.seen)
 		self.save() #Save what we've found for the next time
 
 	def execute_on_all(self, command, *args):
 		"""Execute command on all devices"""
 		cpu_count = 50 #multiprocessing.cpu_count()
 		command_name = command.__name__
-		print "Process count %d" % cpu_count
+		print >>sys.stderr, "Process count %d" % cpu_count
 		pool = multiprocessing.Pool(processes=cpu_count)
 
 		results = [ pool.apply_async(execute_on_device, (host, self.port, self.username, self.password, command_name) + args) for host in self.seen if host not in self.blacklist ]
