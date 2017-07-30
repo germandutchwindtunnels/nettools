@@ -16,40 +16,94 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QTreeWidget" name="ports">
-      <attribute name="headerStretchLastSection">
-       <bool>false</bool>
-      </attribute>
-      <column>
-       <property name="text">
-        <string>Port</string>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <widget class="QWidget" name="PortsTab">
+       <property name="contextMenuPolicy">
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Switch</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Switch port</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Actual</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>VLAN</string>
-       </property>
-      </column>
-      <column>
-       <property name="text">
-        <string>Submit</string>
-       </property>
-      </column>
+       <attribute name="title">
+        <string>Ports</string>
+       </attribute>
+       <widget class="QTreeWidget" name="ports">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>730</width>
+          <height>421</height>
+         </rect>
+        </property>
+        <attribute name="headerStretchLastSection">
+         <bool>false</bool>
+        </attribute>
+        <column>
+         <property name="text">
+          <string>Port</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Switch</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Switch port</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Actual</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>VLAN</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Submit</string>
+         </property>
+        </column>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="HealthTab">
+       <attribute name="title">
+        <string>Health</string>
+       </attribute>
+       <widget class="QTreeWidget" name="Health">
+        <property name="geometry">
+         <rect>
+          <x>-5</x>
+          <y>1</y>
+          <width>731</width>
+          <height>421</height>
+         </rect>
+        </property>
+        <property name="columnCount">
+         <number>3</number>
+        </property>
+        <column>
+         <property name="text">
+          <string>Status</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Switch</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Details</string>
+         </property>
+        </column>
+       </widget>
+      </widget>
      </widget>
     </item>
     <item>
@@ -101,7 +155,7 @@
      <x>0</x>
      <y>0</y>
      <width>748</width>
-     <height>23</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

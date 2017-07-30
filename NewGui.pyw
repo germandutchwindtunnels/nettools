@@ -27,6 +27,9 @@ from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
 from PyQt4.QtGui import QPushButton, QPalette, QColor
 from PyQt4.QtCore import QThread, pyqtSignal, QVariant
 import PyQt4.uic as uic
+import json
+import os.path
+import pyping
 
 class WorkerThread(QThread):
     ''' Perform a background job. Emits a "finished" signal when done. '''
@@ -165,6 +168,7 @@ class NewGui(QApplication):
     COL_VLAN   = 3
     COL_COMBO  = 4
     COL_SUBMIT = 5
+    XOR_STRING = "fduihiuGUIHJGI47897$$*#&ufhsiSHU3789404$*JRF890jufsuhj"
 
     def __init__(self, args):
         ''' Initialisation. '''
@@ -173,6 +177,7 @@ class NewGui(QApplication):
 
         self._ports = [ ]
         self._vlans = [ ]
+        self._health = [ ]
 
         self._msg_box = None
 
@@ -185,6 +190,16 @@ class NewGui(QApplication):
 
         self._win = uic.loadUi("Login.ui")
         
+        if(os.path.isfile("NewGui.dat")): #We have a saved credentials file
+            file = open('NewGui.dat', 'r')
+            credentials = file.read()
+            credentials = json.loads(credentials)
+            self._win.UserName.setText(credentials[0])
+            self._win.Password.setText(credentials[1])
+            self._win.HostName.setText(credentials[2])
+            self._win.RememberCheck.setChecked(1)
+            
+        
         self._win.LoginButton.clicked.connect(self._login)
         self._win.UserName.returnPressed.connect(self._win.LoginButton.click)
         self._win.Password.returnPressed.connect(self._win.LoginButton.click)
@@ -196,6 +211,7 @@ class NewGui(QApplication):
         self._user = str(self._win.UserName.text())
         self._pass = str(self._win.Password.text())
         self._host = str(self._win.HostName.text())
+        self._rememberCheck = self._win.RememberCheck.isChecked()
         if(self._host == "" or self._user == "" or self._pass == ""):
             self._win.errorBox.document().setPlainText("Please make sure to fill in all the variables")
             pal = QPalette()
@@ -203,9 +219,33 @@ class NewGui(QApplication):
             pal.setColor(QPalette.Base, bgc)
             self._win.errorBox.setPalette(pal)
             return
+        try:
+            response = pyping.ping(self._host)
+        except:
+            self._win.errorBox.document().setPlainText("Cannot find host")
+            pal = QPalette()
+            bgc = QColor(255, 0, 0)
+            pal.setColor(QPalette.Base, bgc)
+            self._win.errorBox.setPalette(pal)
+            return
+        if(response.ret_code != 0):
+            self._win.errorBox.document().setPlainText("Host is not reachable")
+            pal = QPalette()
+            bgc = QColor(255, 0, 0)
+            pal.setColor(QPalette.Base, bgc)
+            self._win.errorBox.setPalette(pal)
+            return
+            
+        if(self._rememberCheck): #We need to save the data put in.
+            file = open('NewGui.dat', 'w')
+            file.write(json.dumps([self._user,self._pass,self._host]))
+            file.close()
+            
         self._win = uic.loadUi("NewGui.ui")
         self._win.ports.itemExpanded.connect(lambda item: self._resize())
         self._win.ports.itemCollapsed.connect(lambda item: self._resize())
+        self._win.Health.itemExpanded.connect(lambda item: self._resize())
+        self._win.Health.itemCollapsed.connect(lambda item: self._resize())
 
         self._win.buttonReload.clicked.connect(self._get_configuration)
         self._win.buttonSubmitAll.clicked.connect(self._submit_all)
@@ -218,6 +258,9 @@ class NewGui(QApplication):
 
         self._get_configuration()
         
+    def str_xor(self, s1, s2):
+        return "".join([chr(ord(c1) ^ ord(c2)) for (c1,c2) in zip(s1,s2)])
+    
     @staticmethod
     def _usage(exit_code):
         ''' Show usage and exit with <exit_code>. '''
@@ -298,14 +341,20 @@ class NewGui(QApplication):
 
         for col in range(self._win.ports.columnCount()):
             self._win.ports.resizeColumnToContents(col)
+        for col in range(self._win.Health.columnCount()):
+            self._win.Health.resizeColumnToContents(col)
 
     def _refresh(self):
         ''' Refresh the data table based on the current data. '''
 
         self._win.ports.clear()
+        self._win.Health.clear()
 
         for index, port in enumerate(self._ports):
             self._ports[index]['item'] = self._add_to_tree(port)
+            
+        for index, health in enumerate(self._health):
+            self._health[index]['item'] = self._add_to_health(health)
 
         self._resize()
 
@@ -428,6 +477,9 @@ class NewGui(QApplication):
 
         webbrowser.open(url, 1, True)
 
+    def _add_to_health(self, health):
+        return
+        
     def _add_to_tree(self, port):
         ''' Add an entry for port <port> to the QTreeWidget, '''
 
