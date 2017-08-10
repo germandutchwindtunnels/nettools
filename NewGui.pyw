@@ -173,7 +173,6 @@ class NewGui(QApplication):
     COL_VLAN   = 3
     COL_COMBO  = 4
     COL_SUBMIT = 5
-    XOR_STRING = "fduihiuGUIHJGI47897$$*#&ufhsiSHU3789404$*JRF890jufsuhj"
 
     def __init__(self, args):
         ''' Initialisation. '''
@@ -262,9 +261,6 @@ class NewGui(QApplication):
         self._win.show()
 
         self._get_configuration()
-
-    def str_xor(self, s1, s2):
-        return "".join([chr(ord(c1) ^ ord(c2)) for (c1,c2) in zip(s1,s2)])
 
     @staticmethod
     def _usage(exit_code):
