@@ -78,7 +78,7 @@
        <widget class="QTreeWidget" name="Health">
         <property name="geometry">
          <rect>
-          <x>-5</x>
+          <x>0</x>
           <y>1</y>
           <width>731</width>
           <height>421</height>

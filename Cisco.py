@@ -54,6 +54,11 @@ class CiscoTelnetSession(object):
 	regex_vlanconfig = 'switchport access vlan ' + regex_vlanid.replace("vlanid", "vlanconfig")
 	regex_monitor_session = 'monitor session (?P<monitor_session>[0-9]+)'
 	regex_monitor_srcdst = '(?P<src_dst>(source|destination))\s*(remote|interface)\s*'
+	regex_fan = "FAN is (?P<FAN>[A-Z]+)"
+	regex_temperature = "TEMPERATURE is (?P<TEMPSTATUS>[A-Z]+)"
+	regex_temperature_value = "(Temperature Value: (?P<TEMP>[0-9]+) Degree Celsius)?"
+	regex_temperature_state = "(Temperature State: (?P<TEMPCOLOR>[A-Z]+))?"
+	regex_power_state = "Built-in[\s+] (?P<PWR>[A-Z]+)"
 
 	newline = "\n"
 	character_time_spacing_seconds = 0.1
@@ -218,6 +223,15 @@ class CiscoTelnetSession(object):
 		regex += CiscoTelnetSession.regex_capabilities + CiscoTelnetSession.regex_whitespace
 		regex += CiscoTelnetSession.regex_platform + CiscoTelnetSession.regex_optionalwhitespace
 		regex += CiscoTelnetSession.regex_portid
+		ret = self.command_filter(command, regex)
+		return ret
+
+	def show_health(self):
+		command = "show env all"
+		regex = CiscoTelnetSession.regex_fan + CiscoTelnetSession.regex_whitespace
+		regex += CiscoTelnetSession.regex_temperature + CiscoTelnetSession.regex_whitespace
+		regex += CiscoTelnetSession.regex_temperature_value + CiscoTelnetSession.regex_whitespace
+		regex += CiscoTelnetSession.regex_temperature_state
 		ret = self.command_filter(command, regex)
 		return ret
 

@@ -24,7 +24,7 @@ import sys, re, webbrowser
 import portconfig
 
 from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
-from PyQt4.QtGui import QPushButton, QPalette, QColor
+from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon
 from PyQt4.QtCore import QThread, pyqtSignal, QVariant
 import PyQt4.uic as uic
 import json
@@ -65,7 +65,10 @@ class GetConfigurationThread(WorkerThread):
                                                          self._pass),
             'vlans': portconfig.get_available_vlans(self._host, 23,
                                                     self._user,
-                                                    self._pass)
+                                                    self._pass),
+            'health': portconfig.get_health_status(self._host, 23,
+                                                   self._user,
+                                                   self._pass)
         }
 
         self.newData.emit(data)
@@ -163,7 +166,9 @@ class NewGui(QApplication):
     ''' Port Configurator GUI. '''
 
     COL_PATCH  = 0
+    COL_STATUS = 0
     COL_SWITCH = 1
+    COL_DETAILS = 2
     COL_PORT   = 2
     COL_VLAN   = 3
     COL_COMBO  = 4
@@ -189,7 +194,7 @@ class NewGui(QApplication):
         self._set_config_thread = None
 
         self._win = uic.loadUi("Login.ui")
-        
+
         if(os.path.isfile("NewGui.dat")): #We have a saved credentials file
             file = open('NewGui.dat', 'r')
             credentials = file.read()
@@ -198,13 +203,13 @@ class NewGui(QApplication):
             self._win.Password.setText(credentials[1])
             self._win.HostName.setText(credentials[2])
             self._win.RememberCheck.setChecked(1)
-            
-        
+
+
         self._win.LoginButton.clicked.connect(self._login)
         self._win.UserName.returnPressed.connect(self._win.LoginButton.click)
         self._win.Password.returnPressed.connect(self._win.LoginButton.click)
         self._win.HostName.returnPressed.connect(self._win.LoginButton.click)
-        
+
         self._win.show()
 
     def _login(self):
@@ -235,12 +240,12 @@ class NewGui(QApplication):
             pal.setColor(QPalette.Base, bgc)
             self._win.errorBox.setPalette(pal)
             return
-            
+
         if(self._rememberCheck): #We need to save the data put in.
             file = open('NewGui.dat', 'w')
             file.write(json.dumps([self._user,self._pass,self._host]))
             file.close()
-            
+
         self._win = uic.loadUi("NewGui.ui")
         self._win.ports.itemExpanded.connect(lambda item: self._resize())
         self._win.ports.itemCollapsed.connect(lambda item: self._resize())
@@ -257,10 +262,10 @@ class NewGui(QApplication):
         self._win.show()
 
         self._get_configuration()
-        
+
     def str_xor(self, s1, s2):
         return "".join([chr(ord(c1) ^ ord(c2)) for (c1,c2) in zip(s1,s2)])
-    
+
     @staticmethod
     def _usage(exit_code):
         ''' Show usage and exit with <exit_code>. '''
@@ -276,6 +281,7 @@ class NewGui(QApplication):
 
         self._ports = data['ports']
         self._vlans = data['vlans']
+        self._health = data['health']
 
         self._labels = [ ( None, u'invalid' ) ]
 
@@ -352,7 +358,7 @@ class NewGui(QApplication):
 
         for index, port in enumerate(self._ports):
             self._ports[index]['item'] = self._add_to_tree(port)
-            
+
         for index, health in enumerate(self._health):
             self._health[index]['item'] = self._add_to_health(health)
 
@@ -478,8 +484,48 @@ class NewGui(QApplication):
         webbrowser.open(url, 1, True)
 
     def _add_to_health(self, health):
-        return
-        
+        ''' Add an entry for health <health> to the QTreeWidget, '''
+
+        item = self._win.Health.invisibleRootItem()
+
+        child = QTreeWidgetItem(item, [ "", health['hostname'], ""])
+
+        color = "green"
+
+        for index, status in health.items():
+            if index == "TEMPSTATUS":
+                string = "Temperature Status"
+            if index == "FAN":
+                string = "Fan Status"
+            if index == "TEMPCOLOR":
+                string = "Temperature Color"
+            if index == "TEMP":
+                string = "Temperature"
+            if index == "hostname":
+                continue
+
+            if status != None:
+                subchild = QTreeWidgetItem(child, ["", string, status])
+                if status == 'OK':
+                    subchild.setIcon(0, QIcon('./green.png'))
+                elif status == "GREEN":
+                    subchild.setIcon(0, QIcon('./green.png'))
+                elif index == "TEMP":
+                    #We have a numeric value
+                    if int(status) < 60:
+                        subchild.setIcon(0, QIcon('./green.png'))
+                    else:
+                        subchild.setIcon(0, QIcon('./red.png'))
+                        color = "red"
+                else:
+                    color = "red"
+                    subchild.setIcon(0, QIcon('./red.png'))
+                child.addChild(subchild)
+
+        child.setIcon(0, QIcon('./' + color + '.png'))
+        item.addChild(child)
+        return item
+
     def _add_to_tree(self, port):
         ''' Add an entry for port <port> to the QTreeWidget, '''
 
