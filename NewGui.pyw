@@ -29,7 +29,7 @@ from PyQt4.QtCore import QThread, pyqtSignal, QVariant
 import PyQt4.uic as uic
 import json
 import os.path
-import pyping
+import pyping, ctypes, os
 
 class WorkerThread(QThread):
     ''' Perform a background job. Emits a "finished" signal when done. '''
@@ -208,37 +208,61 @@ class NewGui(QApplication):
         self._win.UserName.returnPressed.connect(self._win.LoginButton.click)
         self._win.Password.returnPressed.connect(self._win.LoginButton.click)
         self._win.HostName.returnPressed.connect(self._win.LoginButton.click)
-
+        
+        try:
+            is_admin = os.getuid() == 0
+        except AttributeError:
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            
+        if is_admin == False:
+            WARNING_COLOR = QPalette()
+            bgc = QColor(255, 165, 0)
+            WARNING_COLOR.setColor(QPalette.Base, bgc)
+            self._win.errorBox.document().setPlainText("Not Admin: Cannot check if HostName is correct")
+            self._win.errorBox.setPalette(WARNING_COLOR)
+            
         self._win.show()
 
     def _login(self):
+        OK_COLOR = QPalette()
+        bgc = QColor(255, 255, 255)
+        OK_COLOR.setColor(QPalette.Base, bgc)
+        
+        ERROR_COLOR = QPalette()
+        bgc = QColor(255, 0, 0)
+        ERROR_COLOR.setColor(QPalette.Base, bgc)
+        
+        self._win.errorBox.document().setPlainText("")
+        self._win.errorBox.setPalette(OK_COLOR)
+        
+        QApplication.processEvents()
+        
         self._user = str(self._win.UserName.text())
         self._pass = str(self._win.Password.text())
         self._host = str(self._win.HostName.text())
         self._rememberCheck = self._win.RememberCheck.isChecked()
+        
         if(self._host == "" or self._user == "" or self._pass == ""):
             self._win.errorBox.document().setPlainText("Please make sure to fill in all the variables")
-            pal = QPalette()
-            bgc = QColor(255, 0, 0)
-            pal.setColor(QPalette.Base, bgc)
-            self._win.errorBox.setPalette(pal)
+            self._win.errorBox.setPalette(ERROR_COLOR)
             return
         try:
-            response = pyping.ping(self._host)
-        except:
-            self._win.errorBox.document().setPlainText("Cannot find host")
-            pal = QPalette()
-            bgc = QColor(255, 0, 0)
-            pal.setColor(QPalette.Base, bgc)
-            self._win.errorBox.setPalette(pal)
-            return
-        if(response.ret_code != 0):
-            self._win.errorBox.document().setPlainText("Host is not reachable")
-            pal = QPalette()
-            bgc = QColor(255, 0, 0)
-            pal.setColor(QPalette.Base, bgc)
-            self._win.errorBox.setPalette(pal)
-            return
+            is_admin = os.getuid() == 0
+        except AttributeError:
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+        
+        if is_admin:
+            try:
+                response = pyping.ping(self._host)
+            except:
+                self._win.errorBox.document().setPlainText("Cannot find host")
+                self._win.errorBox.setPalette(ERROR_COLOR)
+                return
+            if(response.ret_code != 0):
+                self._win.errorBox.document().setPlainText("Host is not reachable")
+                self._win.errorBox.setPalette(ERROR_COLOR)
+                return
+            
 
         if(self._rememberCheck): #We need to save the data put in.
             file = open('NewGui.dat', 'w')
