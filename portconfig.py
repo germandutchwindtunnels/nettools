@@ -37,6 +37,7 @@ main_patchnumber = None
 main_vlanname = None
 main_username = None
 main_password = None
+switchlist = None
 
 def print_list(thelist):
 	"""Concatenate a list of items"""
@@ -68,11 +69,22 @@ def fix_patchid(patchid):
 
 def get_available_patchports(hostname, port, username, password):
 	"""Get all available patchports"""
-	switches = CiscoSet(username, password, hostname, port)
-	switches.discover_devices()
-	all_ports = switches.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
+	global switchlist
+	switchlist = CiscoSet(username, password, hostname, port)
+	switchlist.discover_devices()
+	all_ports = switchlist.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
 	all_ports_sorted = sorted(all_ports, key=lambda k : fix_patchid(k['patchid']))
 	return all_ports_sorted
+
+def get_health_status(hostname, port, username, password):
+	global switchlist
+	"""Get a list of the health status for each switch"""
+	if switchlist == None:
+		switchlist = CiscoSet(username, password, hostname, port)
+		switchlist.discover_devices()
+
+	health_status = switchlist.execute_on_all(CiscoTelnetSession.show_health)
+	return health_status
 
 
 def get_available_vlans(hostname, port, username, password):
@@ -174,6 +186,3 @@ if __name__ == '__main__':
 		sys.stderr.write("AIEEE! This should never happen!\n")
 
 	sys.exit(0)
-
-
-
