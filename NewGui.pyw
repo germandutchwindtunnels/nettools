@@ -174,9 +174,13 @@ class NewGui(QApplication):
     COL_COMBO  = 4
     COL_SUBMIT = 5
 
+    OK_COLOR   = 'none'
+    WARN_COLOR = '#FFA500'
+    ERR_COLOR  = '#FF0000'
+
     def __init__(self, args):
         ''' Initialisation. '''
-        print "Starting"
+
         QApplication.__init__(self, args)
 
         self._ports = [ ]
@@ -218,25 +222,15 @@ class NewGui(QApplication):
             is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
 
         if is_admin == False:
-            WARNING_COLOR = QPalette()
-            bgc = QColor(255, 165, 0)
-            WARNING_COLOR.setColor(QPalette.Base, bgc)
-            self._win.errorBox.document().setPlainText("Not Admin: Cannot check if HostName is correct")
-            self._win.errorBox.setPalette(WARNING_COLOR)
+            self._win.errorBox.document().setPlainText(
+                "Not Admin: Cannot check if HostName is correct")
+            self._win.errorBox.setStyleSheet('background: %s;' % self.WARN_COLOR)
 
         self._win.show()
 
     def _login(self):
-        OK_COLOR = QPalette()
-        bgc = QColor(255, 255, 255)
-        OK_COLOR.setColor(QPalette.Base, bgc)
-
-        ERROR_COLOR = QPalette()
-        bgc = QColor(255, 0, 0)
-        ERROR_COLOR.setColor(QPalette.Base, bgc)
-
         self._win.errorBox.document().setPlainText("")
-        self._win.errorBox.setPalette(OK_COLOR)
+        self._win.errorBox.setStyleSheet('background: %s;' % self.OK_COLOR)
 
         QApplication.processEvents()
 
@@ -247,7 +241,7 @@ class NewGui(QApplication):
 
         if(self._host == "" or self._user == "" or self._pass == ""):
             self._win.errorBox.document().setPlainText("Please make sure to fill in all the variables")
-            self._win.errorBox.setPalette(ERROR_COLOR)
+            self._win.errorBox.setStyleSheet('background: %s;' % self.ERR_COLOR)
             return
         try:
             is_admin = os.getuid() == 0
@@ -259,11 +253,11 @@ class NewGui(QApplication):
                 response = pyping.ping(self._host)
             except:
                 self._win.errorBox.document().setPlainText("Cannot find host")
-                self._win.errorBox.setPalette(ERROR_COLOR)
+                self._win.errorBox.setStyleSheet('background: %s;' % self.ERR_COLOR)
                 return
             if(response.ret_code != 0):
                 self._win.errorBox.document().setPlainText("Host is not reachable")
-                self._win.errorBox.setPalette(ERROR_COLOR)
+                self._win.errorBox.setStyleSheet('background: %s;' % self.ERR_COLOR)
                 return
 
         if self._rememberCheck:         # Save credentials to persistent storage
@@ -465,8 +459,7 @@ class NewGui(QApplication):
         ''' The user has pressed the "Submit all" button. Handle this. '''
 
         self._set_config_thread = SetConfigurationThread(self._user, self._pass)
-        self._set_config_thread.finished.connect(
-            self._set_config_thread_finished)
+        self._set_config_thread.finished.connect(self._set_config_thread_finished)
 
         text = ""
 
