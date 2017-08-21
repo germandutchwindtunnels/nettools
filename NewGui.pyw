@@ -24,9 +24,12 @@ import sys, re, webbrowser
 import portconfig
 
 from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
-from PyQt4.QtGui import QPushButton
+from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon
 from PyQt4.QtCore import QThread, pyqtSignal, QVariant
 import PyQt4.uic as uic
+import json
+import os.path
+import pyping, ctypes, os
 
 class WorkerThread(QThread):
     ''' Perform a background job. Emits a "finished" signal when done. '''
@@ -62,7 +65,10 @@ class GetConfigurationThread(WorkerThread):
                                                          self._pass),
             'vlans': portconfig.get_available_vlans(self._host, 23,
                                                     self._user,
-                                                    self._pass)
+                                                    self._pass),
+            'health': portconfig.get_health_status(self._host, 23,
+                                                   self._user,
+                                                   self._pass)
         }
 
         self.newData.emit(data)
@@ -160,7 +166,9 @@ class NewGui(QApplication):
     ''' Port Configurator GUI. '''
 
     COL_PATCH  = 0
+    COL_STATUS = 0
     COL_SWITCH = 1
+    COL_DETAILS = 2
     COL_PORT   = 2
     COL_VLAN   = 3
     COL_COMBO  = 4
@@ -168,11 +176,12 @@ class NewGui(QApplication):
 
     def __init__(self, args):
         ''' Initialisation. '''
-
+        print "Starting"
         QApplication.__init__(self, args)
 
         self._ports = [ ]
         self._vlans = [ ]
+        self._health = [ ]
 
         self._msg_box = None
 
@@ -183,17 +192,88 @@ class NewGui(QApplication):
         self._get_config_thread = None
         self._set_config_thread = None
 
-        if len(args) == 4:
-            self._user = args[1]
-            self._pass = args[2]
-            self._host = args[3]
-        else:
-            self._usage(-1)
+        self._win = uic.loadUi("Login.ui")
+
+        if(os.path.isfile("NewGui.dat")): #We have a saved credentials file
+            file = open('NewGui.dat', 'r')
+            credentials = file.read()
+            credentials = json.loads(credentials)
+            self._win.UserName.setText(credentials[0])
+            self._win.Password.setText(credentials[1])
+            self._win.HostName.setText(credentials[2])
+            self._win.RememberCheck.setChecked(1)
+
+
+        self._win.LoginButton.clicked.connect(self._login)
+        self._win.UserName.returnPressed.connect(self._win.LoginButton.click)
+        self._win.Password.returnPressed.connect(self._win.LoginButton.click)
+        self._win.HostName.returnPressed.connect(self._win.LoginButton.click)
+        
+        try:
+            is_admin = os.getuid() == 0
+        except AttributeError:
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            
+        if is_admin == False:
+            WARNING_COLOR = QPalette()
+            bgc = QColor(255, 165, 0)
+            WARNING_COLOR.setColor(QPalette.Base, bgc)
+            self._win.errorBox.document().setPlainText("Not Admin: Cannot check if HostName is correct")
+            self._win.errorBox.setPalette(WARNING_COLOR)
+            
+        self._win.show()
+
+    def _login(self):
+        OK_COLOR = QPalette()
+        bgc = QColor(255, 255, 255)
+        OK_COLOR.setColor(QPalette.Base, bgc)
+        
+        ERROR_COLOR = QPalette()
+        bgc = QColor(255, 0, 0)
+        ERROR_COLOR.setColor(QPalette.Base, bgc)
+        
+        self._win.errorBox.document().setPlainText("")
+        self._win.errorBox.setPalette(OK_COLOR)
+        
+        QApplication.processEvents()
+        
+        self._user = str(self._win.UserName.text())
+        self._pass = str(self._win.Password.text())
+        self._host = str(self._win.HostName.text())
+        self._rememberCheck = self._win.RememberCheck.isChecked()
+        
+        if(self._host == "" or self._user == "" or self._pass == ""):
+            self._win.errorBox.document().setPlainText("Please make sure to fill in all the variables")
+            self._win.errorBox.setPalette(ERROR_COLOR)
+            return
+        try:
+            is_admin = os.getuid() == 0
+        except AttributeError:
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+        
+        if is_admin:
+            try:
+                response = pyping.ping(self._host)
+            except:
+                self._win.errorBox.document().setPlainText("Cannot find host")
+                self._win.errorBox.setPalette(ERROR_COLOR)
+                return
+            if(response.ret_code != 0):
+                self._win.errorBox.document().setPlainText("Host is not reachable")
+                self._win.errorBox.setPalette(ERROR_COLOR)
+                return
+            
+
+        if(self._rememberCheck): #We need to save the data put in.
+            file = open('NewGui.dat', 'w')
+            file.write(json.dumps([self._user,self._pass,self._host]))
+            file.close()
 
         self._win = uic.loadUi("NewGui.ui")
-
         self._win.ports.itemExpanded.connect(lambda item: self._resize())
         self._win.ports.itemCollapsed.connect(lambda item: self._resize())
+        self._win.Health.itemExpanded.connect(lambda item: self._resize())
+        self._win.Health.itemCollapsed.connect(lambda item: self._resize())
 
         self._win.buttonReload.clicked.connect(self._get_configuration)
         self._win.buttonSubmitAll.clicked.connect(self._submit_all)
@@ -221,6 +301,7 @@ class NewGui(QApplication):
 
         self._ports = data['ports']
         self._vlans = data['vlans']
+        self._health = data['health']
 
         self._labels = [ ( None, u'invalid' ) ]
 
@@ -286,14 +367,20 @@ class NewGui(QApplication):
 
         for col in range(self._win.ports.columnCount()):
             self._win.ports.resizeColumnToContents(col)
+        for col in range(self._win.Health.columnCount()):
+            self._win.Health.resizeColumnToContents(col)
 
     def _refresh(self):
         ''' Refresh the data table based on the current data. '''
 
         self._win.ports.clear()
+        self._win.Health.clear()
 
         for index, port in enumerate(self._ports):
             self._ports[index]['item'] = self._add_to_tree(port)
+
+        for index, health in enumerate(self._health):
+            self._health[index]['item'] = self._add_to_health(health)
 
         self._resize()
 
@@ -415,6 +502,49 @@ class NewGui(QApplication):
         url = "https://github.com/germandutchwindtunnels/nettools/issues/new"
 
         webbrowser.open(url, 1, True)
+
+    def _add_to_health(self, health):
+        ''' Add an entry for health <health> to the QTreeWidget, '''
+
+        item = self._win.Health.invisibleRootItem()
+
+        child = QTreeWidgetItem(item, [ "", health['hostname'], ""])
+
+        color = "green"
+
+        for index, status in health.items():
+            if index == "TEMPSTATUS":
+                string = "Temperature Status"
+            if index == "FAN":
+                string = "Fan Status"
+            if index == "TEMPCOLOR":
+                string = "Temperature Color"
+            if index == "TEMP":
+                string = "Temperature"
+            if index == "hostname":
+                continue
+
+            if status != None:
+                subchild = QTreeWidgetItem(child, ["", string, status])
+                if status == 'OK':
+                    subchild.setIcon(0, QIcon('./green.png'))
+                elif status == "GREEN":
+                    subchild.setIcon(0, QIcon('./green.png'))
+                elif index == "TEMP":
+                    #We have a numeric value
+                    if int(status) < 60:
+                        subchild.setIcon(0, QIcon('./green.png'))
+                    else:
+                        subchild.setIcon(0, QIcon('./red.png'))
+                        color = "red"
+                else:
+                    color = "red"
+                    subchild.setIcon(0, QIcon('./red.png'))
+                child.addChild(subchild)
+
+        child.setIcon(0, QIcon('./' + color + '.png'))
+        item.addChild(child)
+        return item
 
     def _add_to_tree(self, port):
         ''' Add an entry for port <port> to the QTreeWidget, '''
