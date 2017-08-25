@@ -217,7 +217,7 @@ class NewGui(QApplication):
         self._win.HostName.returnPressed.connect(self._win.LoginButton.click)
 
         self._win.show()
-	
+
     def _login(self):
         self._win.errorBox.document().setPlainText("")
         self._win.errorBox.setStyleSheet('background: %s;' % self.OK_COLOR)
@@ -259,16 +259,6 @@ class NewGui(QApplication):
         self._win.show()
 
         self._get_configuration()
-
-    @staticmethod
-    def _usage(exit_code):
-        ''' Show usage and exit with <exit_code>. '''
-
-        sys.stderr.write("Usage: " \
-                         + sys.argv[0]\
-                         + " <username> <password> <first-switch>\n")
-
-        sys.exit(exit_code)
 
     def _handle_new_data(self, data):
         ''' Handle data from the GetConfigurationThread. '''
