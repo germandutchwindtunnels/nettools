@@ -29,7 +29,7 @@ from PyQt4.QtCore import QThread, pyqtSignal, QVariant, QSettings
 import PyQt4.uic as uic
 import json
 import os.path
-import pyping, ctypes, os
+import ctypes, os
 
 class WorkerThread(QThread):
     ''' Perform a background job. Emits a "finished" signal when done. '''
@@ -216,18 +216,8 @@ class NewGui(QApplication):
         self._win.Password.returnPressed.connect(self._win.LoginButton.click)
         self._win.HostName.returnPressed.connect(self._win.LoginButton.click)
 
-        try:
-            is_admin = os.getuid() == 0
-        except AttributeError:
-            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
-
-        if is_admin == False:
-            self._win.errorBox.document().setPlainText(
-                "Not Admin: Cannot check if HostName is correct")
-            self._win.errorBox.setStyleSheet('background: %s;' % self.WARN_COLOR)
-
         self._win.show()
-
+	
     def _login(self):
         self._win.errorBox.document().setPlainText("")
         self._win.errorBox.setStyleSheet('background: %s;' % self.OK_COLOR)
@@ -243,22 +233,6 @@ class NewGui(QApplication):
             self._win.errorBox.document().setPlainText("Please make sure to fill in all the variables")
             self._win.errorBox.setStyleSheet('background: %s;' % self.ERR_COLOR)
             return
-        try:
-            is_admin = os.getuid() == 0
-        except AttributeError:
-            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
-
-        if is_admin:
-            try:
-                response = pyping.ping(self._host)
-            except:
-                self._win.errorBox.document().setPlainText("Cannot find host")
-                self._win.errorBox.setStyleSheet('background: %s;' % self.ERR_COLOR)
-                return
-            if(response.ret_code != 0):
-                self._win.errorBox.document().setPlainText("Host is not reachable")
-                self._win.errorBox.setStyleSheet('background: %s;' % self.ERR_COLOR)
-                return
 
         if self._rememberCheck:         # Save credentials to persistent storage
             self._qsettings.setValue('username', self._user)
