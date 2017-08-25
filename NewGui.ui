@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>748</width>
-    <height>538</height>
+    <width>784</width>
+    <height>524</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -27,82 +27,74 @@
        <attribute name="title">
         <string>Ports</string>
        </attribute>
-       <widget class="QTreeWidget" name="ports">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>0</y>
-          <width>730</width>
-          <height>421</height>
-         </rect>
-        </property>
-        <attribute name="headerStretchLastSection">
-         <bool>false</bool>
-        </attribute>
-        <column>
-         <property name="text">
-          <string>Port</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Switch</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Switch port</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Actual</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>VLAN</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Submit</string>
-         </property>
-        </column>
-       </widget>
+       <layout class="QGridLayout" name="gridLayout">
+        <item row="0" column="0">
+         <widget class="QTreeWidget" name="ports">
+          <attribute name="headerStretchLastSection">
+           <bool>false</bool>
+          </attribute>
+          <column>
+           <property name="text">
+            <string>Port</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Switch</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Switch port</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Actual</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>VLAN</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Submit</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="HealthTab">
        <attribute name="title">
         <string>Health</string>
        </attribute>
-       <widget class="QTreeWidget" name="Health">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>1</y>
-          <width>731</width>
-          <height>421</height>
-         </rect>
-        </property>
-        <property name="columnCount">
-         <number>3</number>
-        </property>
-        <column>
-         <property name="text">
-          <string>Status</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Switch</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Details</string>
-         </property>
-        </column>
-       </widget>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="0">
+         <widget class="QTreeWidget" name="Health">
+          <property name="columnCount">
+           <number>3</number>
+          </property>
+          <column>
+           <property name="text">
+            <string>Status</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Switch</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Details</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
@@ -154,8 +146,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>748</width>
-     <height>21</height>
+     <width>784</width>
+     <height>23</height>
     </rect>
    </property>
   </widget>
