@@ -90,6 +90,7 @@ class CiscoTelnetSession(object):
 		"""Write a command to the peer"""
 #		self.session.write(commandstr)
 		commandstr_len = len(commandstr)
+		print "Write: " + commandstr + " length: " + str(commandstr_len)
 		for i in range(0, commandstr_len):
 			self.session.write(commandstr[i])
 			time.sleep(self.character_time_spacing_seconds)
@@ -98,11 +99,10 @@ class CiscoTelnetSession(object):
 
 	def execute_command_lowlevel(self, command, timeout = None):
 		"""Execute a command and return the result"""
-		#print self.host + ".execute_command: " + command
+		print self.host + ".execute_command: " + command
 		if timeout is None:
 			timeout = self.response_timeout
 		commandstr = command + self.newline #.strip() + self.newline
-
 		self.write_command(commandstr)
 		output = self.session.read_until(self.prompt, timeout)
 		ret = output[:-len(self.prompt)]
@@ -112,6 +112,7 @@ class CiscoTelnetSession(object):
 	def execute_command(self, command, timeout = None):
 		"""Execute a command on the Cisco switch"""
 		retries_remaining = 3
+
 		while retries_remaining > 0:
 			try:
 				return self.execute_command_lowlevel(command, timeout)
@@ -503,7 +504,7 @@ class CiscoSet(object):
 
 	def execute_on_all(self, command, *args):
 		"""Execute command on all devices"""
-		cpu_count = 50 #multiprocessing.cpu_count()
+		cpu_count = 25 #multiprocessing.cpu_count()
 		command_name = command.__name__
 		print >>sys.stderr, "Process count %d" % cpu_count
 		pool = multiprocessing.Pool(processes=cpu_count)

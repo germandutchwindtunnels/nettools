@@ -23,13 +23,23 @@ import sys, re, webbrowser
 
 import portconfig
 
-from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
-from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon
+from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox, QCheckBox
+from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon, QVBoxLayout, QLabel, QTextBrowser, QVBoxLayout, QWidget, QHBoxLayout
 from PyQt4.QtCore import QThread, pyqtSignal, QVariant, QSettings
 import PyQt4.uic as uic
 import json
 import os.path
 import ctypes, os
+import multiprocessing
+from Cisco import CiscoTelnetSession
+
+def execute_custom(hostname, port, username, password, command):
+    print "Executing " + command + " on " + hostname
+    device = CiscoTelnetSession()
+    open_result = device.open(hostname, port, username, password)
+    ret = device.execute_command(command)
+    
+    print ret
 
 class WorkerThread(QThread):
     ''' Perform a background job. Emits a "finished" signal when done. '''
@@ -177,6 +187,8 @@ class NewGui(QApplication):
     OK_COLOR   = 'none'
     WARN_COLOR = '#FFA500'
     ERR_COLOR  = '#FF0000'
+    textboxes = {}
+    checkboxes = {}
 
     def __init__(self, args):
         ''' Initialisation. '''
@@ -259,6 +271,7 @@ class NewGui(QApplication):
         self._win.show()
 
         self._get_configuration()
+        
 
     @staticmethod
     def _usage(exit_code):
@@ -306,7 +319,40 @@ class NewGui(QApplication):
             self._msg_box.hide()
             self._msg_box.deleteLater()
             self._msg_box = None
+			
+        item = self._win.scrollAreaWidgetContents
+        
+        for host in portconfig.switchlist.seen:
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            label = QLabel(host)
+            HorizontalWidget = QWidget()
+            HorizontalLayout = QHBoxLayout(HorizontalWidget)
+            self.checkboxes[host] = QCheckBox()
+            HorizontalLayout.addWidget(self.checkboxes[host])
+            HorizontalLayout.addWidget(label)        
+            self.textboxes[host] = QTextBrowser()
+            layout.addWidget(HorizontalWidget)
+            layout.addWidget(self.textboxes[host])
+            item.layout().addWidget(widget)
+        
+        self._win.ConsoleInput.returnPressed.connect(self._sendToAll)
+            
 
+    def _sendToAll(self):
+        ExecuteOn = []
+        command = self._win.ConsoleInput.text()
+        cpu_count = 25 #multiprocessing.cpu_count()
+        print >>sys.stderr, "Process count %d" % cpu_count
+        for host, cb in enumerate(self.checkboxes):
+            if self.checkboxes[cb].isChecked():
+                print "Execute on "+cb
+                ExecuteOn.append(cb)
+        pool = multiprocessing.Pool(processes=cpu_count)
+        results = [ pool.apply_async(execute_custom, (host, 23, self._user, self._pass, command)) for host in ExecuteOn ]
+        
+    
+        
     def _show_message(self, text):
         ''' Show an informational message box with <text>. '''
 

@@ -14,11 +14,11 @@
    <string>Port Configurator</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <item>
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="PortsTab">
        <property name="contextMenuPolicy">
@@ -27,86 +27,110 @@
        <attribute name="title">
         <string>Ports</string>
        </attribute>
-       <widget class="QTreeWidget" name="ports">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>0</y>
-          <width>730</width>
-          <height>421</height>
-         </rect>
-        </property>
-        <attribute name="headerStretchLastSection">
-         <bool>false</bool>
-        </attribute>
-        <column>
-         <property name="text">
-          <string>Port</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Switch</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Switch port</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Actual</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>VLAN</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Submit</string>
-         </property>
-        </column>
-       </widget>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QTreeWidget" name="ports">
+          <attribute name="headerStretchLastSection">
+           <bool>false</bool>
+          </attribute>
+          <column>
+           <property name="text">
+            <string>Port</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Switch</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Switch port</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Actual</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>VLAN</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Submit</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="HealthTab">
        <attribute name="title">
         <string>Health</string>
        </attribute>
-       <widget class="QTreeWidget" name="Health">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>1</y>
-          <width>731</width>
-          <height>421</height>
-         </rect>
-        </property>
-        <property name="columnCount">
-         <number>3</number>
-        </property>
-        <column>
-         <property name="text">
-          <string>Status</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Switch</string>
-         </property>
-        </column>
-        <column>
-         <property name="text">
-          <string>Details</string>
-         </property>
-        </column>
-       </widget>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QTreeWidget" name="Health">
+          <property name="columnCount">
+           <number>3</number>
+          </property>
+          <column>
+           <property name="text">
+            <string>Status</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Switch</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Details</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="console">
+       <attribute name="title">
+        <string>Console</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="1" column="0">
+         <widget class="QScrollArea" name="scrollArea">
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollAreaWidgetContents">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>704</width>
+             <height>376</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout">
+            <item row="0" column="0">
+             <layout class="QGridLayout" name="gridLayout_6"/>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLineEdit" name="ConsoleInput"/>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
-    <item>
+    <item row="1" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QPushButton" name="buttonBugReport">
