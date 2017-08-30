@@ -19,20 +19,21 @@
 
 import sys
 sys.path.append("./dulwich")
-import dulwich.porcelain as porcelain #pylint: disable=import-error
-import dulwich.errors #pylint: disable=import-error
+import dulwich.porcelain as porcelain  # pylint: disable=import-error
+import dulwich.errors  # pylint: disable=import-error
 from subprocess import check_call as run
 
 github_url = "https://github.com/germandutchwindtunnels/nettools.git"
 target_dir = "./"
 
 if len(sys.argv) < 2:
-	print "Usage: %s script script-args" % sys.argv[0]
-	sys.exit(-1)
+    print "Usage: %s script script-args" % sys.argv[0]
+    sys.exit(-1)
 
 try:
-	porcelain.pull(target_dir, github_url)
+    porcelain.pull(target_dir, github_url)
 except dulwich.errors.NotGitRepository:
-	porcelain.clone(github_url, target_dir)
+    porcelain.clone(github_url, target_dir)
+
 cmd = sys.executable + " " + " ".join(sys.argv[1:])
 run(cmd, shell=True)
