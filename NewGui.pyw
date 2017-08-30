@@ -18,21 +18,22 @@
 
 ''' A New GUI for nettools. '''
 
-import sys, re, webbrowser
-# import pprint
+import sys, re, webbrowser, threading
+import pprint
 
 import portconfig
+from Cisco import CiscoTelnetSession
 
-from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
-from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon
-from PyQt4.QtCore import QThread, pyqtSignal, QVariant, QSettings
+from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QTableWidgetItem, QComboBox
+from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon, QDialog, QBrush
+from PyQt4.QtCore import QThread, pyqtSignal, QVariant, QSettings, Qt
 import PyQt4.uic as uic
 import json
 import os.path
 import ctypes, os
 
 class WorkerThread(QThread):
-    ''' Perform a background job. Emits a "finished" signal when done. '''
+    ''' Perform a background job. Emits a "done" signal when done. '''
 
     def __init__(self, username, password):
         ''' Initialisation. '''
@@ -42,36 +43,35 @@ class WorkerThread(QThread):
         self._user = username
         self._pass = password
 
-class GetConfigurationThread(WorkerThread):
-    ''' Get the network configuration in the background. Emits the "newData"
-        signal with patchports and vlans when done, then emits the "finished"
-        signal. '''
+class GetConfigurationThread(QThread):
+    ''' Get the network configuration in the background. '''
 
-    newData = pyqtSignal(dict)
+    done = pyqtSignal(object)
+    state = pyqtSignal(str)
 
-    def __init__(self, hostname, username, password):
+    def __init__(self, session, parent = None):
         ''' Initialisation. '''
 
-        WorkerThread.__init__(self, username, password)
+        QThread.__init__(self, parent)
 
-        self._host = hostname
+        self._session = session
 
     def run(self):
         ''' Run this thread. '''
 
-        data = {
-            'ports': portconfig.get_available_patchports(self._host, 23,
-                                                         self._user,
-                                                         self._pass),
-            'vlans': portconfig.get_available_vlans(self._host, 23,
-                                                    self._user,
-                                                    self._pass),
-            'health': portconfig.get_health_status(self._host, 23,
-                                                   self._user,
-                                                   self._pass)
-        }
-
-        self.newData.emit(data)
+        try:
+            self.state.emit('connect')
+            self._session.connect()
+            self.state.emit('log in')
+            self._session.login()
+            self.state.emit('get neighbors')
+            self._session.get_neighbors()
+            self.state.emit('get configuration')
+            self._session.get_configuration()
+        except Exception as e:
+            self.done.emit(str(e))
+        else:
+            self.done.emit(None)
 
 class SetConfigurationThread(WorkerThread):
     ''' Set the network configuration in the background. Emits the "finished"
@@ -162,6 +162,51 @@ class MyComboBox(QComboBox):
 
         return self.itemData(self.currentIndex())
 
+class SwitchStatus(QDialog):
+    ui_class, _ = uic.loadUiType('SwitchStatus.ui')
+
+    ui = ui_class()
+
+    green  = QBrush(Qt.darkGreen)
+    orange = QBrush(Qt.darkYellow)
+    red    = QBrush(Qt.darkRed)
+
+    def __init__(self, parent = None):
+        QDialog.__init__(self, parent)
+
+        self.ui.setupUi(self)
+
+        self._host_to_row = { }
+
+    def setText(self, text):
+        self.ui.label.setText(text)
+
+    def enableOk(self, enabled):
+        self.ui.buttonBox.setEnabled(enabled)
+
+    def addSwitch(self, host):
+        row = self.ui.table.rowCount()
+
+        self._host_to_row[host] = row
+
+        self.ui.table.setRowCount(row + 1)
+
+        self.ui.table.setItem(row, 0, QTableWidgetItem(host))
+
+    def setStatus(self, host, status, brush):
+        row = self._host_to_row[host]
+
+        item = QTableWidgetItem(status)
+
+        item.setForeground(brush)
+
+        self.ui.table.setItem(row, 1, item)
+
+        self.ui.table.resizeColumnsToContents()
+
+    def clear(self):
+        self.ui.table.setRowCount(0)
+
 class NewGui(QApplication):
     ''' Port Configurator GUI. '''
 
@@ -178,14 +223,19 @@ class NewGui(QApplication):
     WARN_COLOR = '#FFA500'
     ERR_COLOR  = '#FF0000'
 
+    TELNET_PORT = 23
+
     def __init__(self, args):
         ''' Initialisation. '''
 
         QApplication.__init__(self, args)
 
         self._ports = [ ]
-        self._vlans = [ ]
+        self._vlans = { }
         self._health = [ ]
+
+        self._pending = set()
+        self._problems = [ ]
 
         self._msg_box = None
 
@@ -222,7 +272,7 @@ class NewGui(QApplication):
         self._win.errorBox.document().setPlainText("")
         self._win.errorBox.setStyleSheet('background: %s;' % self.OK_COLOR)
 
-        QApplication.processEvents()
+        # QApplication.processEvents()
 
         self._user = str(self._win.UserName.text())
         self._pass = str(self._win.Password.text())
@@ -258,20 +308,78 @@ class NewGui(QApplication):
 
         self._win.show()
 
-        self._get_configuration()
+        self._sessions = { }
 
-    def _handle_new_data(self, data):
+        self._session_lock = threading.Lock()
+
+        self._status_dialog = SwitchStatus(self._win)
+        self._status_dialog.show()
+
+        self._add_switch(self._host)
+
+    def _add_switch(self, host):
+        # print "New switch:", host
+
+        self._status_dialog.addSwitch(host)
+        self._status_dialog.setStatus(host, 'Get neighbors', SwitchStatus.orange)
+
+        session = CiscoTelnetSession(host, self.TELNET_PORT, self._user, self._pass)
+
+        self._sessions[host] = session
+        self._pending.add(session)
+
+        thread = GetConfigurationThread(session, self)
+        thread.state.connect(lambda state, session = session: self._handle_state(session, state))
+        thread.done.connect(lambda err, session = session: self._handle_done(session, err))
+        thread.start()
+
+    def _handle_state(self, session, state):
+        state = str(state)
+
+        # print "_handle_state:", session, state
+
+        self._status_dialog.setStatus(session.host, state.capitalize(), SwitchStatus.orange)
+
+        if state == 'get configuration':
+            for host in session.neighbors:
+                with self._session_lock:
+                    if host not in self._sessions:
+                        self._add_switch(host)
+
+    def _handle_done(self, session, err = None):
+        self._pending.remove(session)
+
+        if err is None:
+            self._status_dialog.setStatus(session.host, 'Ok', SwitchStatus.green)
+        else:
+            self._status_dialog.setStatus(session.host, err.capitalize(), SwitchStatus.red)
+
+        if not self._pending:
+            self._status_dialog.setText('Scan complete.')
+            self._status_dialog.enableOk(True)
+
+            self._update_ui()
+
+    def _update_ui(self):
         ''' Handle data from the GetConfigurationThread. '''
 
-        self._ports = data['ports']
-        self._vlans = data['vlans']
-        self._health = data['health']
+        self._ports = [ ]
+        self._vlans = { }
+        self._health = [ ]
+
+        for host, session in self._sessions.iteritems():
+            self._ports.extend(session.ports)
+            self._health.extend(session.health)
+
+            for vlan in session.vlans:
+                self._vlans[int(vlan['vlanid'])] = vlan['vlanname']
+
+        self._ports.sort(key = lambda port: port['patchid'])
 
         self._labels = [ ( None, u'invalid' ) ]
 
-        for vlan in self._vlans:
-            vlanid = vlan['vlanid']
-            label  = '%s (%s)' % (vlanid, vlan['vlanname'])
+        for vlanid in sorted(self._vlans.keys()):
+            label = '%s (%s)' % (vlanid, self._vlans[vlanid])
 
             self._labels.append( ( vlanid, label ) )
 
@@ -279,11 +387,11 @@ class NewGui(QApplication):
             if port['vlanid'] == 'unassigned':
                 self._ports[i]['vlanid'] = 'dynamic'
 
-        # print "Ports:"
-        # pprint.pprint(self._ports)
+        print "Ports:"
+        pprint.pprint(self._ports)
 
-        # print "VLANs:"
-        # pprint.pprint(self._vlans)
+        print "VLANs:"
+        pprint.pprint(self._vlans)
 
         self._refresh()
 
@@ -314,15 +422,14 @@ class NewGui(QApplication):
         ''' Get the current network configuration. '''
 
         self._win.ports.clear()
+        self._win.Health.clear()
 
-        self._show_message('Getting switch configuration; please wait.')
+        self._sessions = { }
 
-        self._get_config_thread = GetConfigurationThread(self._host,
-                                                         self._user,
-                                                         self._pass)
-        self._get_config_thread.newData.connect(self._handle_new_data)
-        self._get_config_thread.finished.connect( self._get_config_thread_finished)
-        self._get_config_thread.start()
+        self._status_dialog.clear()
+        self._status_dialog.show()
+
+        self._add_switch(self._host)
 
     def _resize(self):
         ''' Resize the columns of the data table based on its current contents.
@@ -338,6 +445,8 @@ class NewGui(QApplication):
 
         self._win.ports.clear()
         self._win.Health.clear()
+
+        QApplication.processEvents()
 
         for index, port in enumerate(self._ports):
             self._ports[index]['item'] = self._add_to_tree(port)
@@ -413,10 +522,8 @@ class NewGui(QApplication):
                            (port['patchid'], new_vlan_id))
 
         self._set_config_thread = SetConfigurationThread(self._user, self._pass)
-        self._set_config_thread.addJob(switch_host, switch_port,
-                old_vlan_id, new_vlan_id)
-        self._set_config_thread.finished.connect(
-                self._set_config_thread_finished)
+        self._set_config_thread.addJob(switch_host, switch_port, old_vlan_id, new_vlan_id)
+        self._set_config_thread.finished.connect(self._set_config_thread_finished)
         self._set_config_thread.start()
 
     def _submit_all(self):
@@ -515,7 +622,7 @@ class NewGui(QApplication):
         item = self._win.ports.invisibleRootItem()
 
         # Split the patch id into segments, and for every segment...
-        for id_segment in re.split('[_-]', port['patchid']):
+        for id_segment in re.split('[\._-]', port['patchid']):
             id_segment_to_index = { }
 
             # Get the names of all the child items at the current tree level...
