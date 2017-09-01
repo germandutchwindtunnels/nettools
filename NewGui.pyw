@@ -128,9 +128,8 @@ class MyComboBox(QComboBox):
 
         self.clear()
 
-        for i, (vlan, label) in enumerate(data):
-            self.addItem(str(label))
-            self.setItemData(i, vlan)
+        for vlan, label in data:
+            self.addItem(str(label), vlan)
 
     def selectData(self, data):
         """ Select the entry that has data field <data>. """
@@ -318,8 +317,6 @@ class NewGui(QApplication):
         self._add_switch(self._host)
 
     def _add_switch(self, host):
-        # print "New switch:", host
-
         self._status_dialog.addSwitch(host)
         self._status_dialog.setStatus(host, 'Get neighbors', SwitchStatus.orange)
 
@@ -336,11 +333,14 @@ class NewGui(QApplication):
     def _handle_state(self, session, state):
         state = str(state)
 
-        # print "_handle_state:", session, state
+        print "New state for %s: %s" % (session.host, state)
 
         self._status_dialog.setStatus(session.host, state.capitalize(), SwitchStatus.orange)
 
         if state == 'get configuration':
+            # If state is "get configuration" this means that this switch has retrieved its list of 
+            # neighbors. Add the ones we haven't heard of before.
+
             for host in session.neighbors:
                 with self._session_lock:
                     if host not in self._sessions:
@@ -354,11 +354,25 @@ class NewGui(QApplication):
         else:
             self._status_dialog.setStatus(session.host, err.capitalize(), SwitchStatus.red)
 
+        for port in session.ports:
+            segments = re.split('[\._-]', port['patchid'])
+            id_as_list = [ ]
+            for segment in segments:
+                try:
+                    id_as_list.append(int(segment))
+                except ValueError:
+                    id_as_list.append(segment)
+
+            port['address'] = tuple(id_as_list)
+
         if not self._pending:
-            self._status_dialog.setText('Scan complete.')
-            self._status_dialog.enableOk(True)
+            self._status_dialog.setText('Scan complete, building port list...')
+            QApplication.processEvents()
 
             self._update_ui()
+
+            self._status_dialog.setText('All done.')
+            self._status_dialog.enableOk(True)
 
     def _update_ui(self):
         ''' Handle data from the GetConfigurationThread. '''
@@ -374,7 +388,7 @@ class NewGui(QApplication):
             for vlan in session.vlans:
                 self._vlans[int(vlan['vlanid'])] = vlan['vlanname']
 
-        self._ports.sort(key = lambda port: port['patchid'])
+        self._ports.sort(key = lambda port: port['address'])
 
         self._labels = [ ( None, u'invalid' ) ]
 
@@ -390,10 +404,54 @@ class NewGui(QApplication):
         print "Ports:"
         pprint.pprint(self._ports)
 
-        print "VLANs:"
-        pprint.pprint(self._vlans)
+        # print "VLANs:"
+        # pprint.pprint(self._vlans)
 
         self._refresh()
+
+    @staticmethod
+    def _add_port(branch, forks, port):
+        if len(forks) == 1:
+            branch[forks[0]] = port
+        elif forks[0] in branch:
+            NewGui._add_port(branch[forks[0]], forks[1:], port)
+        else:
+            branch[forks[0]] = { }
+            NewGui._add_port(branch[forks[0]], forks[1:], port)
+
+    def _refresh(self):
+        ''' Refresh the data table based on the current data. '''
+
+        self._win.ports.clear()
+        self._win.Health.clear()
+
+        '''
+        tree = { }
+
+        for port in self._ports:
+            segments = re.split('[\._-]', port['patchid'])
+
+            self._add_port(tree, segments, port)
+        '''
+
+        QApplication.processEvents()
+
+        for index, port in enumerate(self._ports):
+            self._ports[index]['item'] = self._add_to_tree(port)
+
+        for index, health in enumerate(self._health):
+            self._health[index]['item'] = self._add_to_health(health)
+
+        self._resize()
+
+    def _resize(self):
+        ''' Resize the columns of the data table based on its current contents.
+        '''
+
+        for col in range(self._win.ports.columnCount()):
+            self._win.ports.resizeColumnToContents(col)
+        for col in range(self._win.Health.columnCount()):
+            self._win.Health.resizeColumnToContents(col)
 
     def _get_config_thread_finished(self):
         ''' Handle completion of the GetConfigurationThread. '''
@@ -430,31 +488,6 @@ class NewGui(QApplication):
         self._status_dialog.show()
 
         self._add_switch(self._host)
-
-    def _resize(self):
-        ''' Resize the columns of the data table based on its current contents.
-        '''
-
-        for col in range(self._win.ports.columnCount()):
-            self._win.ports.resizeColumnToContents(col)
-        for col in range(self._win.Health.columnCount()):
-            self._win.Health.resizeColumnToContents(col)
-
-    def _refresh(self):
-        ''' Refresh the data table based on the current data. '''
-
-        self._win.ports.clear()
-        self._win.Health.clear()
-
-        QApplication.processEvents()
-
-        for index, port in enumerate(self._ports):
-            self._ports[index]['item'] = self._add_to_tree(port)
-
-        for index, health in enumerate(self._health):
-            self._health[index]['item'] = self._add_to_health(health)
-
-        self._resize()
 
     def _reset_children(self, item):
         ''' Reset the current vlan number and disable the Submit button for all
@@ -622,7 +655,9 @@ class NewGui(QApplication):
         item = self._win.ports.invisibleRootItem()
 
         # Split the patch id into segments, and for every segment...
-        for id_segment in re.split('[\._-]', port['patchid']):
+        for id_segment in port['address']:
+            id_segment = str(id_segment)
+
             id_segment_to_index = { }
 
             # Get the names of all the child items at the current tree level...
@@ -639,7 +674,6 @@ class NewGui(QApplication):
             else:
                 # otherwise create and select a new child.
                 child = QTreeWidgetItem(item, [ id_segment ])
-                item.addChild(child)
 
             # Make the selected child the current item and do it all again.
             item = child
@@ -660,8 +694,7 @@ class NewGui(QApplication):
 
         submit = QPushButton("Submit", self._win.ports)
         submit.clicked.connect(
-                lambda checked, port = port, item = item:
-                       self._submit_pressed(port, item))
+            lambda checked, port = port, item = item: self._submit_pressed(port, item))
 
         submit.setEnabled(False)
 
