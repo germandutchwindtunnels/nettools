@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>748</width>
-    <height>538</height>
+    <width>784</width>
+    <height>524</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -134,6 +134,7 @@
          <widget class="QLineEdit" name="ConsoleInput"/>
         </item>
        </layout>
+
       </widget>
      </widget>
     </item>

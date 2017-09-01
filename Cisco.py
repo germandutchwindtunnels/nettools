@@ -18,13 +18,13 @@
 
 """This is the module defining the CiscoTelnetSession class"""
 from telnetlib import Telnet
-from sets import Set
 import multiprocessing
 import re
 import time
 import json
 import sys
 import socket
+import pprint
 
 class CiscoTelnetSession(object):
 	"""This class provides the interface to a Cisco router/switch over Telnet"""
@@ -116,7 +116,7 @@ class CiscoTelnetSession(object):
 				return self.execute_command_lowlevel(command, timeout)
 			except EOFError:
 				retries_remaining = retries_remaining - 1
-				print >>sys.stderr, "Got EOFError, reconnecting..."
+				print "Got EOFError, reconnecting..."
 				self.connect_and_login()
 
 	def connect_and_login(self):
@@ -257,7 +257,9 @@ class CiscoTelnetSession(object):
 	def upload_file_tftp(self, src_filename, host, dest_filename):
 		'''Upload a file through tftp'''
 		regex = '(?P<bytes>[0-9]+)\sbytes\s'
-		command = "copy " + src_filename + " tftp://" + host + "/" + dest_filename + self.newline + self.newline #+ self.newline# + "#dummy suffix"
+		command = "copy " + src_filename \
+			+ " tftp://" + host + "/" + dest_filename + self.newline \
+			+ self.newline #+ self.newline# + "#dummy suffix"
 		command = command.replace("HOSTNAME", self.host)
 #		print self.host + ": command='" + command + "'"
 		output = self.command_filter(command, regex, 60)
@@ -275,13 +277,20 @@ class CiscoTelnetSession(object):
 
 	def add_user(self, username, password, privilege_level = 15):
 		'''Add a user'''
-		cmd = "config terminal" + self.newline + "no username " + str(username) + self.newline + "username " + str(username) + " privilege " + str(privilege_level) + " secret " + str(password) + self.newline + "end"
+		cmd = "config terminal" + self.newline \
+                    + "no username " + str(username) + self.newline \
+                    + "username " + str(username) \
+                    + " privilege " + str(privilege_level) \
+                    + " secret " + str(password) + self.newline + "end"
 		ret = self.execute_command(cmd)
 		return ret
 
 	def enable_telnet_login(self):
 		'''Force login on telnet'''
-		cmd = "config terminal" + self.newline + "line vty 0 4" + self.newline + "login local" + self.newline + "end" + self.newline
+		cmd = "config terminal" + self.newline \
+                    + "line vty 0 4" + self.newline \
+                    + "login local" + self.newline \
+                    + "end" + self.newline
 		return self.execute_command(cmd)
 
 	def show_lldp_neighbors(self):
@@ -450,7 +459,7 @@ class CiscoSet(object):
 		self.password = password
 		self.start_device = start_device
 		self.port = port
-		self.seen = [ start_device ]
+		self.seen = { start_device }
 		self.blacklist = []
 
 	def get_serialize_filename(self):
@@ -463,23 +472,25 @@ class CiscoSet(object):
 		filename = self.get_serialize_filename()
 		seen = self.seen
 		try:
-			fd = open(filename, "r")
-			json_contents = fd.read()
+			with open(filename, "r") as fd:
+				json_contents = fd.read()
+
 			json_decoded = json.loads(json_contents)
-			self.seen = json_decoded
+			self.seen = set(json_decoded)
 		except IOError:
-			pass #Doesn't matter, we'll create it on save
+			#Doesn't matter, we'll create it on save
+			pass
 		except ValueError:
-			self.seen = seen #Restore backup of seen when we encounter problems during decoding
+			#Restore backup of seen when we encounter problems during decoding
+			self.seen = seen
 
 	def save(self):
 		"""Save to file"""
 		filename = self.get_serialize_filename()
-		fd = open(filename, "w+")
-		json_contents = json.dumps(self.seen)
-		fd.write(json_contents)
+		json_contents = json.dumps(list(self.seen))
 
-
+		with open(filename, "w+") as fd:
+			fd.write(json_contents)
 
 	def set_blacklist(self, blacklist):
 		"""Don't connect to these hosts"""
@@ -487,24 +498,26 @@ class CiscoSet(object):
 
 	def discover_devices(self):
 		'''Discover all networking devices, using a depth-first search.'''
-		self.load() #Attempt to bootstrap using a saved json file
+		self.load()	# Attempt to bootstrap using a saved json file
+
 		last_count = 0
 		while last_count != len(self.seen):
 			last_count = len(self.seen)
+
 			outputs = self.execute_on_all(CiscoTelnetSession.show_neighbors)
-			neighborslist = [ x for x in outputs ] #Concatenate all outputs to one
-			neighbor_hostnames = [ x['deviceid'] for x in neighborslist ]
-			all_devices = self.seen + neighbor_hostnames
-			all_devices_uniq = uniq(all_devices)
-			self.seen = all_devices_uniq
-			print >>sys.stderr, "Seen: " + str(self.seen)
-		self.save() #Save what we've found for the next time
+
+			for output in outputs:
+				self.seen.add(output['deviceid'])
+
+			print "Seen: " + pprint.pformat(self.seen)
+
+		self.save()	# Save what we've found for the next time
 
 	def execute_on_all(self, command, *args):
 		"""Execute command on all devices"""
 		cpu_count = 25 #multiprocessing.cpu_count()
 		command_name = command.__name__
-		print >>sys.stderr, "Process count %d" % cpu_count
+		print "Process count %d" % cpu_count
 		pool = multiprocessing.Pool(processes=cpu_count)
 
 		results = [ pool.apply_async(execute_on_device, (host, self.port, self.username, self.password, command_name) + args) for host in self.seen if host not in self.blacklist ]
@@ -515,13 +528,6 @@ class CiscoSet(object):
 			except TypeError:
 				ret = ret + [res.get()]
 		return ret
-
-def uniq(seq):
-	"""Remove duplicates from list"""
-	s = Set(seq)
-	unique = list(s)
-	unique_sorted = sorted(unique)
-	return unique_sorted
 
 def execute_on_device(hostname, port, username, password, command_name, *args):
 	"""Helper function for CiscoSet.discover_devices"""
