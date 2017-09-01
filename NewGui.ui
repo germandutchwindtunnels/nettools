@@ -14,8 +14,8 @@
    <string>Port Configurator</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <item>
+   <layout class="QGridLayout" name="gridLayout_2">
+    <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
        <number>0</number>
@@ -27,7 +27,7 @@
        <attribute name="title">
         <string>Ports</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout">
+       <layout class="QGridLayout" name="gridLayout_5">
         <item row="0" column="0">
          <widget class="QTreeWidget" name="ports">
           <attribute name="headerStretchLastSection">
@@ -71,7 +71,7 @@
        <attribute name="title">
         <string>Health</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_2">
+       <layout class="QGridLayout" name="gridLayout_4">
         <item row="0" column="0">
          <widget class="QTreeWidget" name="Health">
           <property name="columnCount">
@@ -96,9 +96,49 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="console">
+       <attribute name="title">
+        <string>Console</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="1" column="0">
+         <widget class="QScrollArea" name="scrollArea">
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollAreaWidgetContents">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>704</width>
+             <height>363</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="gridLayout">
+            <item row="0" column="0">
+             <widget class="QSplitter" name="splitter">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="childrenCollapsible">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLineEdit" name="ConsoleInput"/>
+        </item>
+       </layout>
+
+      </widget>
      </widget>
     </item>
-    <item>
+    <item row="1" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QPushButton" name="buttonBugReport">
@@ -146,7 +186,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>784</width>
+     <width>748</width>
      <height>23</height>
     </rect>
    </property>
