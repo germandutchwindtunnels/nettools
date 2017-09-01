@@ -37,9 +37,9 @@ def execute_custom(hostname, port, username, password, command):
     print "Executing " + command + " on " + hostname
     device = CiscoTelnetSession()
     open_result = device.open(hostname, port, username, password)
-    ret = device.execute_command(command)
-    
-    print ret
+    ret = {}
+    ret[hostname] = device.execute_command(command)
+    return ret
 
 class WorkerThread(QThread):
     ''' Perform a background job. Emits a "finished" signal when done. '''
@@ -341,7 +341,7 @@ class NewGui(QApplication):
 
     def _sendToAll(self):
         ExecuteOn = []
-        command = self._win.ConsoleInput.text()
+        command = str(self._win.ConsoleInput.text())
         cpu_count = 25 #multiprocessing.cpu_count()
         print >>sys.stderr, "Process count %d" % cpu_count
         for host, cb in enumerate(self.checkboxes):
@@ -349,7 +349,14 @@ class NewGui(QApplication):
                 print "Execute on "+cb
                 ExecuteOn.append(cb)
         pool = multiprocessing.Pool(processes=cpu_count)
-        results = [ pool.apply_async(execute_custom, (host, 23, self._user, self._pass, command)) for host in ExecuteOn ]
+        results = []
+        for host in ExecuteOn:
+            results.append(pool.apply_async(execute_custom, (host, 23, self._user, self._pass, command)))
+        pool.close()
+        pool.join()
+        results = [r.get() for r in results]
+        for host in results:
+            self.textboxes[host.keys()[0]].setText(host[host.keys()[0]]) 
         
     
         

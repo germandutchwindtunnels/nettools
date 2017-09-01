@@ -90,7 +90,6 @@ class CiscoTelnetSession(object):
 		"""Write a command to the peer"""
 #		self.session.write(commandstr)
 		commandstr_len = len(commandstr)
-		print "Write: " + commandstr + " length: " + str(commandstr_len)
 		for i in range(0, commandstr_len):
 			self.session.write(commandstr[i])
 			time.sleep(self.character_time_spacing_seconds)
@@ -99,7 +98,6 @@ class CiscoTelnetSession(object):
 
 	def execute_command_lowlevel(self, command, timeout = None):
 		"""Execute a command and return the result"""
-		print self.host + ".execute_command: " + command
 		if timeout is None:
 			timeout = self.response_timeout
 		commandstr = command + self.newline #.strip() + self.newline
