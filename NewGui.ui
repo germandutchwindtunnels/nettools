@@ -112,12 +112,19 @@
              <x>0</x>
              <y>0</y>
              <width>704</width>
-             <height>376</height>
+             <height>363</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout">
             <item row="0" column="0">
-             <layout class="QGridLayout" name="gridLayout_6"/>
+             <widget class="QSplitter" name="splitter">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="childrenCollapsible">
+               <bool>false</bool>
+              </property>
+             </widget>
             </item>
            </layout>
           </widget>
@@ -179,7 +186,7 @@
      <x>0</x>
      <y>0</y>
      <width>748</width>
-     <height>21</height>
+     <height>23</height>
     </rect>
    </property>
   </widget>

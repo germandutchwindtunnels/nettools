@@ -24,7 +24,8 @@ import sys, re, webbrowser
 import portconfig
 
 from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox, QCheckBox
-from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon, QVBoxLayout, QLabel, QTextBrowser, QVBoxLayout, QWidget, QHBoxLayout
+from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon, QLabel
+from PyQt4.QtGui import QTextBrowser, QVBoxLayout, QFrame
 from PyQt4.QtCore import QThread, pyqtSignal, QVariant, QSettings
 import PyQt4.uic as uic
 import json
@@ -319,25 +320,28 @@ class NewGui(QApplication):
             self._msg_box.hide()
             self._msg_box.deleteLater()
             self._msg_box = None
-			
-        item = self._win.scrollAreaWidgetContents
-        
+
+        scroll_area = self._win.scrollAreaWidgetContents
+        scroll_area.setMinimumHeight(150 * len(portconfig.switchlist.seen))
+
+        splitter = self._win.splitter
+
         for host in portconfig.switchlist.seen:
-            widget = QWidget()
-            layout = QVBoxLayout(widget)
-            label = QLabel(host)
-            HorizontalWidget = QWidget()
-            HorizontalLayout = QHBoxLayout(HorizontalWidget)
-            self.checkboxes[host] = QCheckBox()
-            HorizontalLayout.addWidget(self.checkboxes[host])
-            HorizontalLayout.addWidget(label)        
-            self.textboxes[host] = QTextBrowser()
-            layout.addWidget(HorizontalWidget)
-            layout.addWidget(self.textboxes[host])
-            item.layout().addWidget(widget)
-        
+            container_widget = QFrame(scroll_area)
+            container_widget.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+
+            container_layout = QVBoxLayout(container_widget)
+
+            self.checkboxes[host] = QCheckBox(host, container_widget)
+            self.textboxes[host] = QTextBrowser(container_widget)
+            self.textboxes[host].setMinimumHeight(1)
+
+            container_layout.addWidget(self.checkboxes[host])
+            container_layout.addWidget(self.textboxes[host])
+
+            splitter.addWidget(container_widget)
+
         self._win.ConsoleInput.returnPressed.connect(self._sendToAll)
-            
 
     def _sendToAll(self):
         ExecuteOn = []
