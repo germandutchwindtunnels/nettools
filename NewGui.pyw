@@ -23,13 +23,24 @@ import sys, re, webbrowser
 
 import portconfig
 
-from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox
-from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon
-from PyQt4.QtCore import QThread, pyqtSignal, QVariant
+from PyQt4.QtGui import QApplication, QMessageBox, QTreeWidgetItem, QComboBox, QCheckBox
+from PyQt4.QtGui import QPushButton, QPalette, QColor, QIcon, QLabel
+from PyQt4.QtGui import QTextBrowser, QVBoxLayout, QFrame
+from PyQt4.QtCore import QThread, pyqtSignal, QVariant, QSettings
 import PyQt4.uic as uic
 import json
 import os.path
-import pyping, ctypes, os
+import ctypes, os
+import multiprocessing
+from Cisco import CiscoTelnetSession
+
+def execute_custom(hostname, port, username, password, command):
+    print "Executing " + command + " on " + hostname
+    device = CiscoTelnetSession()
+    open_result = device.open(hostname, port, username, password)
+    ret = {}
+    ret[hostname] = device.execute_command(command)
+    return ret
 
 class WorkerThread(QThread):
     ''' Perform a background job. Emits a "finished" signal when done. '''
@@ -174,9 +185,15 @@ class NewGui(QApplication):
     COL_COMBO  = 4
     COL_SUBMIT = 5
 
+    OK_COLOR   = 'none'
+    WARN_COLOR = '#FFA500'
+    ERR_COLOR  = '#FF0000'
+    textboxes = {}
+    checkboxes = {}
+
     def __init__(self, args):
         ''' Initialisation. '''
-        print "Starting"
+
         QApplication.__init__(self, args)
 
         self._ports = [ ]
@@ -194,80 +211,50 @@ class NewGui(QApplication):
 
         self._win = uic.loadUi("Login.ui")
 
-        if(os.path.isfile("NewGui.dat")): #We have a saved credentials file
-            file = open('NewGui.dat', 'r')
-            credentials = file.read()
-            credentials = json.loads(credentials)
-            self._win.UserName.setText(credentials[0])
-            self._win.Password.setText(credentials[1])
-            self._win.HostName.setText(credentials[2])
-            self._win.RememberCheck.setChecked(1)
+        # Get credentials from persistent storage
 
+        self._qsettings = QSettings("DNW", "nettools", self)
+
+        self._win.RememberCheck.setChecked(self._qsettings.childKeys().count() > 0)
+
+        if self._qsettings.contains('username'):
+            self._win.UserName.setText(self._qsettings.value('username').toString())
+        if self._qsettings.contains('password'):
+            self._win.Password.setText(self._qsettings.value('password').toString())
+        if self._qsettings.contains('hostname'):
+            self._win.HostName.setText(self._qsettings.value('hostname').toString())
 
         self._win.LoginButton.clicked.connect(self._login)
         self._win.UserName.returnPressed.connect(self._win.LoginButton.click)
         self._win.Password.returnPressed.connect(self._win.LoginButton.click)
         self._win.HostName.returnPressed.connect(self._win.LoginButton.click)
-        
-        try:
-            is_admin = os.getuid() == 0
-        except AttributeError:
-            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
-            
-        if is_admin == False:
-            WARNING_COLOR = QPalette()
-            bgc = QColor(255, 165, 0)
-            WARNING_COLOR.setColor(QPalette.Base, bgc)
-            self._win.errorBox.document().setPlainText("Not Admin: Cannot check if HostName is correct")
-            self._win.errorBox.setPalette(WARNING_COLOR)
-            
+
         self._win.show()
 
     def _login(self):
-        OK_COLOR = QPalette()
-        bgc = QColor(255, 255, 255)
-        OK_COLOR.setColor(QPalette.Base, bgc)
-        
-        ERROR_COLOR = QPalette()
-        bgc = QColor(255, 0, 0)
-        ERROR_COLOR.setColor(QPalette.Base, bgc)
-        
         self._win.errorBox.document().setPlainText("")
-        self._win.errorBox.setPalette(OK_COLOR)
-        
+        self._win.errorBox.setStyleSheet('background: %s;' % self.OK_COLOR)
+
         QApplication.processEvents()
-        
+
         self._user = str(self._win.UserName.text())
         self._pass = str(self._win.Password.text())
         self._host = str(self._win.HostName.text())
         self._rememberCheck = self._win.RememberCheck.isChecked()
-        
+
         if(self._host == "" or self._user == "" or self._pass == ""):
             self._win.errorBox.document().setPlainText("Please make sure to fill in all the variables")
-            self._win.errorBox.setPalette(ERROR_COLOR)
+            self._win.errorBox.setStyleSheet('background: %s;' % self.ERR_COLOR)
             return
-        try:
-            is_admin = os.getuid() == 0
-        except AttributeError:
-            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
-        
-        if is_admin:
-            try:
-                response = pyping.ping(self._host)
-            except:
-                self._win.errorBox.document().setPlainText("Cannot find host")
-                self._win.errorBox.setPalette(ERROR_COLOR)
-                return
-            if(response.ret_code != 0):
-                self._win.errorBox.document().setPlainText("Host is not reachable")
-                self._win.errorBox.setPalette(ERROR_COLOR)
-                return
-            
 
-        if(self._rememberCheck): #We need to save the data put in.
-            file = open('NewGui.dat', 'w')
-            file.write(json.dumps([self._user,self._pass,self._host]))
-            file.close()
+        if self._rememberCheck:         # Save credentials to persistent storage
+            self._qsettings.setValue('username', self._user)
+            self._qsettings.setValue('password', self._pass)
+            self._qsettings.setValue('hostname', self._host)
+        else:                           # Clear persistent storage
+            self._qsettings.clear()
+
+        self._qsettings.sync()
 
         self._win = uic.loadUi("NewGui.ui")
         self._win.ports.itemExpanded.connect(lambda item: self._resize())
@@ -285,16 +272,7 @@ class NewGui(QApplication):
         self._win.show()
 
         self._get_configuration()
-
-    @staticmethod
-    def _usage(exit_code):
-        ''' Show usage and exit with <exit_code>. '''
-
-        sys.stderr.write("Usage: " \
-                         + sys.argv[0]\
-                         + " <username> <password> <first-switch>\n")
-
-        sys.exit(exit_code)
+        
 
     def _handle_new_data(self, data):
         ''' Handle data from the GetConfigurationThread. '''
@@ -333,6 +311,49 @@ class NewGui(QApplication):
             self._msg_box.deleteLater()
             self._msg_box = None
 
+        scroll_area = self._win.scrollAreaWidgetContents
+        scroll_area.setMinimumHeight(150 * len(portconfig.switchlist.seen))
+
+        splitter = self._win.splitter
+
+        for host in portconfig.switchlist.seen:
+            container_widget = QFrame(scroll_area)
+            container_widget.setFrameStyle(QFrame.Panel | QFrame.Sunken)
+
+            container_layout = QVBoxLayout(container_widget)
+
+            self.checkboxes[host] = QCheckBox(host, container_widget)
+            self.textboxes[host] = QTextBrowser(container_widget)
+            self.textboxes[host].setMinimumHeight(1)
+
+            container_layout.addWidget(self.checkboxes[host])
+            container_layout.addWidget(self.textboxes[host])
+
+            splitter.addWidget(container_widget)
+
+        self._win.ConsoleInput.returnPressed.connect(self._sendToAll)
+
+    def _sendToAll(self):
+        ExecuteOn = []
+        command = str(self._win.ConsoleInput.text())
+        cpu_count = 25 #multiprocessing.cpu_count()
+        print >>sys.stderr, "Process count %d" % cpu_count
+        for host, cb in enumerate(self.checkboxes):
+            if self.checkboxes[cb].isChecked():
+                print "Execute on "+cb
+                ExecuteOn.append(cb)
+        pool = multiprocessing.Pool(processes=cpu_count)
+        results = []
+        for host in ExecuteOn:
+            results.append(pool.apply_async(execute_custom, (host, 23, self._user, self._pass, command)))
+        pool.close()
+        pool.join()
+        results = [r.get() for r in results]
+        for host in results:
+            self.textboxes[host.keys()[0]].setText(host[host.keys()[0]]) 
+        
+    
+        
     def _show_message(self, text):
         ''' Show an informational message box with <text>. '''
 
@@ -357,8 +378,7 @@ class NewGui(QApplication):
                                                          self._user,
                                                          self._pass)
         self._get_config_thread.newData.connect(self._handle_new_data)
-        self._get_config_thread.finished.connect(
-            self._get_config_thread_finished)
+        self._get_config_thread.finished.connect( self._get_config_thread_finished)
         self._get_config_thread.start()
 
     def _resize(self):
@@ -460,8 +480,7 @@ class NewGui(QApplication):
         ''' The user has pressed the "Submit all" button. Handle this. '''
 
         self._set_config_thread = SetConfigurationThread(self._user, self._pass)
-        self._set_config_thread.finished.connect(
-            self._set_config_thread_finished)
+        self._set_config_thread.finished.connect(self._set_config_thread_finished)
 
         text = ""
 

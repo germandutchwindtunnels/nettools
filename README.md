@@ -25,6 +25,7 @@ For the procedure to work, a number of conditions must be met:
 * The user supplied to nettools must be registered on the switch with enough privileges.
 
 ## How to run this application
+<<<<<<< HEAD
 The application needs to be started with the following command:
 * python NewGui.pyw _username password first-switch_
 
@@ -39,3 +40,9 @@ For instance:
 * python network_graph.py _username password first-switch_ > graph.dot && dot -Tsvg -Kdot -o graph.svg graph.dot
 
 
+=======
+The application is started as follows:
+* python NewGui.pyw
+It will then ask you for a username, password and a first switch to 
+contact.
+>>>>>>> refs/remotes/origin/master
