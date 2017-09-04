@@ -27,5 +27,6 @@ For the procedure to work, a number of conditions must be met:
 ## How to run this application
 The application is started as follows:
 * python NewGui.pyw
+
 It will then ask you for a username, password and a first switch to 
 contact.

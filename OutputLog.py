@@ -15,41 +15,44 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with nettools.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provides the OutLog class."""
+""" This module provides the OutLog class. """
 
 import PyQt4.QtGui as QtGui
 
+
 class OutLog(object):
-	"""Outlog enables one to redirect stdout and stderr to a QTextEdit widget."""
-	def __init__(self, edit, out=None, color=None):
-		"""(edit, out=None, color=None) -> can write stdout, stderr to a QTextEdit."""
-		self.edit = edit
-		self.out = out
-		self.color = color
+    """ Outlog enables one to redirect stdout and stderr to a QTextEdit widget. """
 
-	def write(self, msg):
-		"""Write a message to output and QTextEdit."""
-		if self.color:
-			txt_color = self.edit.textColor()
-			self.edit.setTextColor(self.color)
+    def __init__(self, edit, out=None, color=None):
+        """ (edit, out=None, color=None) -> can write stdout, stderr to a QTextEdit. """
+        self.edit = edit
+        self.out = out
+        self.color = color
 
-		self.edit.moveCursor(QtGui.QTextCursor.End)
-		self.edit.insertPlainText(msg)
+    def write(self, msg):
+        """ Write a message to output and QTextEdit. """
+        if self.color:
+            txt_color = self.edit.textColor()
+            self.edit.setTextColor(self.color)
 
-		self.edit.ensureCursorVisible()
+        self.edit.moveCursor(QtGui.QTextCursor.End)
+        self.edit.insertPlainText(msg)
 
-		if self.color:
-			self.edit.setTextColor(txt_color)
+        self.edit.ensureCursorVisible()
 
-		if self.out:
-			try:
-				self.out.write(msg)
-			except IOError:
-				pass
-	def flush(self):
-		"""Flush output."""
-		if self.out:
-			try:
-				self.out.flush()
-			except IOError:
-				pass
+        if self.color:
+            self.edit.setTextColor(txt_color)
+
+        if self.out:
+            try:
+                self.out.write(msg)
+            except IOError:
+                pass
+
+    def flush(self):
+        """ Flush output. """
+        if self.out:
+            try:
+                self.out.flush()
+            except IOError:
+                pass
