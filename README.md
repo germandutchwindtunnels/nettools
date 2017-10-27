@@ -43,6 +43,7 @@ For instance:
 =======
 The application is started as follows:
 * python NewGui.pyw
+
 It will then ask you for a username, password and a first switch to 
 contact.
 >>>>>>> refs/remotes/origin/master

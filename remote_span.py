@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""This file is the main routine for finding IPs in a Cisco-based network"""
+""" This file is the main routine for finding IPs in a Cisco-based network """
 import sys
 import json
 
@@ -8,16 +8,28 @@ from portconfig import print_list
 
 telnet_port = 23
 
+
 def print_switchports(hostname, portnr, user, pwd):
-	"""Print all switchports with a good description on a given switch"""
-	switch = CiscoTelnetSession()
-	switch.open(hostname, portnr, user, pwd)
-	ports = switch.show_interface_vlan()
-	print_list(ports)
+    """ Print all switchports with a good description on a given switch """
+    switch = CiscoTelnetSession()
+    switch.open(hostname, portnr, user, pwd)
+    ports = switch.show_interface_vlan()
+    print_list(ports)
+
+
+
+def span_session_from_vlan(spanvlan):
+    """ Translate a SPAN vlan number to a session number """
+    span_session_number = (int(spanvlan) % 10) + 1  # map vlan number to a session number 1-10
+    return span_session_number
+
+
 
 def erase_remote_span_session(switchset, span_session_number):
-	"""Erase a remote span session on a previously established CiscoSet"""
-	switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
+    """ Erase a remote span session on a previously established CiscoSet """
+    switchset.execute_on_all(CiscoTelnetSession.clear_remote_span, span_session_number)
+
+
 
 def discover_erase_span(user, pwd, switch, spansession):
 	"""Discover the network from switch and remote a span session"""
@@ -29,13 +41,16 @@ def discover_erase_span(user, pwd, switch, spansession):
 	json_output = json.dumps(output)
 	print json_output
 
+
 def list_span_sessions(user, pwd, switch):
-	"""Show all current span sessions"""
-	switchset = CiscoSet(user, pwd, switch, telnet_port)
-	switchset.discover_devices()
-	output = switchset.execute_on_all(CiscoTelnetSession.show_span)
-	json_output = json.dumps(output)
-	print json_output
+    """ Show all current span sessions """
+    switchset = CiscoSet(user, pwd, switch, telnet_port)
+    switchset.discover_devices()
+    output = switchset.execute_on_all(CiscoTelnetSession.show_span)
+    json_output = json.dumps(output)
+    print json_output
+
+
 
 def configure_remote_span(srcswitch, srcport, srcinterface, dstswitch, dstinterface, spanvlan, user, pwd): #pylint: disable=too-many-arguments
 	"""Configure a remote span session on both switches"""

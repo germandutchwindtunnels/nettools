@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""This file is the main routine for finding IPs in a Cisco-based network"""
+""" This file is the main routine for finding IPs in a Cisco-based network """
 import sys
 import json
 
@@ -7,26 +7,30 @@ from Cisco import CiscoTelnetSession, CiscoSet
 
 telnet_port = 23
 
+
 def get_port_patchid(port_list, hostname_switch, switch_port):
-	"""Look up the patchid of a port"""
-	for cur_port in port_list:
-		if cur_port["interface"] == switch_port and cur_port["hostname"] == hostname_switch:
-			return cur_port["patchid"]
-	return None
+    """ Look up the patchid of a port """
+    for cur_port in port_list:
+        if cur_port["interface"] == switch_port and cur_port["hostname"] == hostname_switch:
+            return cur_port["patchid"]
+    return None
+
 
 def get_vlan_name(vlan_list, vlan_id):
-	"""Look up the vlan name by the vlan id, in a list returned by the switch"""
-	for vlan in vlan_list:
-		if vlan["vlanid"] == str(vlan_id):
-			return vlan["vlanname"]
+    """ Look up the vlan name by the vlan id, in a list returned by the switch """
+    for vlan in vlan_list:
+        if vlan["vlanid"] == str(vlan_id):
+            return vlan["vlanname"]
+
 
 def count_mac_addresses(mac_addresses, hostname, switch_port):
-	"""Count the number of mac addresses seen on a single port"""
-	count = 0
-	for cur_mac_entry in mac_addresses:
-		if cur_mac_entry["hostname"] == hostname and cur_mac_entry["port"] == switch_port:
-			count = count + 1
-	return count
+    """ Count the number of mac addresses seen on a single port """
+    count = 0
+    for cur_mac_entry in mac_addresses:
+        if cur_mac_entry["hostname"] == hostname and cur_mac_entry["port"] == switch_port:
+            count = count + 1
+    return count
+
 
 if __name__ == '__main__':
 	#This block initializes some variables depending on how we were called
