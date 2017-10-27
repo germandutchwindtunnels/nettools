@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+Cisco.pyc
+=======
 #################
 ## Eclipse
 #################
@@ -218,3 +221,4 @@ pip-log.txt
 #custom parts
 *.json
 NewGui.dat
+>>>>>>> refs/remotes/origin/master

@@ -19,13 +19,14 @@
 """ This is the module defining the CiscoTelnetSession class """
 
 from telnetlib import Telnet
+from sets import Set
 import multiprocessing
 import re
 import time
 import json
 import sys
 import socket
-import pprint
+import os
 
 
 class CiscoTelnetSession(object):
@@ -543,12 +544,19 @@ class CiscoSet(object):
                 ret = ret + [res.get()]
         return ret
 
+def uniq(seq):
+	"""Remove duplicates from list"""
+	s = Set(seq)
+	unique = list(s)
+	unique_sorted = sorted(unique)
+	return unique_sorted
 
 def execute_on_device(hostname, port, username, password, command_name, *args):
     """ Helper function for CiscoSet.discover_devices """
     device = CiscoTelnetSession()
     open_result = device.open(hostname, port, username, password)
 #	object_functions = dir(device)
+
     command = getattr(device, command_name, None)
     if command is None:
         sys.stderr.write(

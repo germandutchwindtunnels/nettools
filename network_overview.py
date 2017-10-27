@@ -33,47 +33,52 @@ def count_mac_addresses(mac_addresses, hostname, switch_port):
 
 
 if __name__ == '__main__':
-    # This block initializes some variables depending on how we were called
-    if len(sys.argv) < 5:
-        sys.stderr.write("Usage: " + sys.argv[0] + " username password router switch\n")
-        sys.exit(-1)
+	#This block initializes some variables depending on how we were called
+	if len(sys.argv) < 5:
+		sys.stderr.write("Usage: " + sys.argv[0] + " username password router switch\n")
+		sys.exit(-1)
 
-    username = str(sys.argv[1])
-    password = str(sys.argv[2])
-    router_hostname = str(sys.argv[3])
-    switch_hostname = str(sys.argv[4])
-    port = 23
+	username	= str(sys.argv[1])
+	password	= str(sys.argv[2])
+	router_hostname	= str(sys.argv[3])
+	switch_hostname	= str(sys.argv[4])
+	port = 23
 
-    router = CiscoTelnetSession()
-    router.open(router_hostname, port, username, password)
-    arp = router.show_arp()
 
-    switchset = CiscoSet(username, password, switch_hostname, port)
-    switchset.discover_devices()
 
-    vlan_switch = CiscoTelnetSession()
-    vlan_switch.open(switch_hostname, port, username, password)
-    vlans = vlan_switch.show_vlan()
+	router = CiscoTelnetSession()
+	router.open(router_hostname, port, username, password)
+	arp = router.show_arp()
 
-    mac = switchset.execute_on_all(CiscoTelnetSession.show_mac_address_table)
-    all_ports = switchset.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
-    for port in all_ports:
-        try:
-            port["vlanname"] = get_vlan_name(vlans, port["vlanid"])
-            port["vlanconfigname"] = get_vlan_name(vlans, port["vlanconfig"])
-        except KeyError:
-            pass
+	switchset = CiscoSet(username, password, switch_hostname, port)
+	switchset.discover_devices()
 
-    port_settings = switchset.execute_on_all(CiscoTelnetSession.get_interface_vlan_setting)
-    for port_setting in port_settings:
-        port_setting["interface"] = CiscoTelnetSession.fix_interfacename(port_setting["interface"])
+	vlan_switch = CiscoTelnetSession()
+	vlan_switch.open(switch_hostname, port, username, password)
+	vlans = vlan_switch.show_vlan()
 
-    for mac_entry in mac:
-        mac_entry.pop("macaddress_type")  # Remove uninteresting info before printing
-        mac_entry["uncertainty"] = count_mac_addresses(
-            mac, mac_entry["hostname"], mac_entry["port"])
-        mac_entry["vlanname"] = get_vlan_name(vlans, mac_entry["vlanid"])
-        mac_entry["patchid"] = get_port_patchid(all_ports, mac_entry["hostname"], mac_entry["port"])
+	mac = switchset.execute_on_all(CiscoTelnetSession.show_mac_address_table)
+	all_ports = switchset.execute_on_all(CiscoTelnetSession.get_interface_status_and_setting)
+	for port in all_ports:
+		try:
+			port["vlanname"] = get_vlan_name(vlans, port["vlanid"])
+			port["vlanconfigname"] = get_vlan_name(vlans, port["vlanconfig"])
+		except KeyError:
+			pass
 
-    json_list = {"arp": arp, "mac": mac, "ports": all_ports, "vlans": vlans}
-    print json.dumps(json_list)
+	port_settings = switchset.execute_on_all(CiscoTelnetSession.get_interface_vlan_setting)
+	for port_setting in port_settings:
+		port_setting["interface"] = CiscoTelnetSession.fix_interfacename(port_setting["interface"])
+
+	for mac_entry in mac:
+		mac_entry.pop("macaddress_type") #Remove uninteresting info before printing
+		mac_entry["uncertainty"] = count_mac_addresses(mac, mac_entry["hostname"], mac_entry["port"])
+		mac_entry["vlanname"] = get_vlan_name(vlans, mac_entry["vlanid"])
+		mac_entry["patchid"] = get_port_patchid(all_ports, mac_entry["hostname"], mac_entry["port"])
+	    
+	rspan = switchset.execute_on_all(CiscoTelnetSession.show_span)
+
+	neighbors = switchset.execute_on_all(CiscoTelnetSession.show_neighbors)
+
+	json_list = { "arp" : arp, "mac" : mac, "ports" : all_ports, "vlans" : vlans, "rspan" : rspan, "neighbors" : neighbors}
+	print json.dumps(json_list)
