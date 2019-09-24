@@ -27,7 +27,7 @@ import json
 import sys
 import socket
 import os
-
+import pprint
 
 class CiscoTelnetSession(object):
     """ This class provides the interface to a Cisco router/switch over Telnet """
